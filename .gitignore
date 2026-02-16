@@ -1,0 +1,56 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Data (large files; re-run phase1_dataset.py to regenerate)
+data/*.csv
+data/*.parquet
+
+# Models and checkpoints (re-run phase2_train.py to regenerate)
+src/models/
+*.pkl
+*.pt
+*.bin
+*.safetensors
+
+# Results (re-run phase3/phase4 to regenerate)
+results/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Env and secrets
+.env
+.env.local
+*.key
+
+# Logs
+*.log
+logs/
+
+# Hugging Face cache (optional; remove if you want to cache in repo)
+.cache/
