@@ -15,7 +15,9 @@ import pandas as pd
 
 # Google Chat webhook for training logs (hardcoded)
 CHAT_WEBHOOK_URL = (
-    ""
+    "https://chat.googleapis.com/v1/spaces/AAQAwJE8HMo/messages"
+    "?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI"
+    "&token=1D1W6woJWK8LDFSMJis-x3WrexFXgL1GmNt73c19MnA"
 )
 
 
