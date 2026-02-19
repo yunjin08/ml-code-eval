@@ -8,9 +8,30 @@ import argparse
 import json
 import os
 import sys
+import urllib.request
 
 import numpy as np
 import pandas as pd
+
+# Google Chat webhook for training logs (hardcoded)
+CHAT_WEBHOOK_URL = (
+    ""
+)
+
+
+def send_chat_log(text: str) -> None:
+    """POST a plain-text message to Google Chat. Failures are ignored (no crash)."""
+    try:
+        data = json.dumps({"text": text}).encode("utf-8")
+        req = urllib.request.Request(
+            CHAT_WEBHOOK_URL,
+            data=data,
+            method="POST",
+            headers={"Content-Type": "application/json"},
+        )
+        urllib.request.urlopen(req, timeout=10)
+    except Exception:
+        pass  # don't fail training if Chat is unreachable
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
@@ -46,9 +67,21 @@ def train_codebert(train_df, val_df, max_train=None, max_val=None, epochs=3, bat
         AutoModelForSequenceClassification,
         AutoTokenizer,
         Trainer,
+        TrainerCallback,
         TrainingArguments,
     )
     from transformers import EvalPrediction
+
+    class ChatLogCallback(TrainerCallback):
+        def on_evaluate(self, args, state, control, metrics=None, **kwargs):
+            if metrics is None:
+                return
+            epoch = state.epoch if state.epoch is not None else 0
+            f1 = metrics.get("eval_f1", 0)
+            loss = metrics.get("eval_loss", 0)
+            send_chat_log(
+                f"[Phase 2] CodeBERT epoch {epoch:.1f} — eval_f1: {f1:.4f}, eval_loss: {loss:.4f}"
+            )
 
     if max_train:
         train_df = train_df.sample(n=max_train, random_state=42)
@@ -139,6 +172,12 @@ def train_codebert(train_df, val_df, max_train=None, max_val=None, epochs=3, bat
         train_dataset=train_ds,
         eval_dataset=val_ds,
         compute_metrics=compute_metrics,
+        callbacks=[ChatLogCallback()],
+    )
+    n_train = len(train_ds)
+    n_val = len(val_ds)
+    send_chat_log(
+        f"[Phase 2] CodeBERT training started — train: {n_train}, val: {n_val}, epochs: {epochs}, batch_size: {batch_size}"
     )
     trainer.train()
     eval_out = trainer.evaluate()
@@ -203,44 +242,58 @@ def main():
     parser.add_argument("--cpu", action="store_true", help="Use CPU for CodeBERT (avoids MPS OOM on Apple M1/M2/M3)")
     args = parser.parse_args()
 
+    send_chat_log(
+        f"[Phase 2] Training started — max_train: {args.max_train}, max_val: {args.max_val}, "
+        f"epochs: {args.epochs}, batch_size: {args.batch_size}, cpu: {args.cpu}"
+    )
+
     train_df, val_df = load_curated()
     report = {"codebert": None, "random_forest": None, "selected_model": None}
 
-    if not args.skip_codebert:
-        import torch
+    try:
+        if not args.skip_codebert:
+            import torch
 
-        print("Training CodeBERT...")
-        _, _, cb_f1, cb_metrics = train_codebert(
-            train_df, val_df,
-            max_train=args.max_train, max_val=args.max_val,
-            epochs=args.epochs, batch_size=args.batch_size,
-            use_cpu=args.cpu,
+            print("Training CodeBERT...")
+            _, _, cb_f1, cb_metrics = train_codebert(
+                train_df, val_df,
+                max_train=args.max_train, max_val=args.max_val,
+                epochs=args.epochs, batch_size=args.batch_size,
+                use_cpu=args.cpu,
+            )
+            report["codebert"] = cb_metrics
+            print(f"CodeBERT validation F1: {cb_f1:.4f}")
+            send_chat_log(f"[Phase 2] CodeBERT done — validation F1: {cb_f1:.4f}")
+        else:
+            cb_f1 = -1.0
+
+        if not args.skip_rf:
+            print("Training Random Forest...")
+            _, rf_f1, rf_metrics = train_random_forest(
+                train_df, val_df, max_train=args.max_train, max_val=args.max_val
+            )
+            report["random_forest"] = rf_metrics
+            print(f"Random Forest validation F1: {rf_f1:.4f}")
+            send_chat_log(f"[Phase 2] Random Forest done — validation F1: {rf_f1:.4f}")
+        else:
+            rf_f1 = -1.0
+
+        if cb_f1 >= rf_f1 and not args.skip_codebert:
+            report["selected_model"] = "codebert"
+        else:
+            report["selected_model"] = "random_forest"
+
+        report_path = os.path.join(RESULTS_DIR, "phase2_validation_report.json")
+        with open(report_path, "w") as f:
+            json.dump(report, f, indent=2)
+        print(f"Selected model for Phase 3: {report['selected_model']}")
+        print(f"Report saved to {report_path}")
+        send_chat_log(
+            f"[Phase 2] Finished — selected: {report['selected_model']}, report: {report_path}"
         )
-        report["codebert"] = cb_metrics
-        print(f"CodeBERT validation F1: {cb_f1:.4f}")
-    else:
-        cb_f1 = -1.0
-
-    if not args.skip_rf:
-        print("Training Random Forest...")
-        _, rf_f1, rf_metrics = train_random_forest(
-            train_df, val_df, max_train=args.max_train, max_val=args.max_val
-        )
-        report["random_forest"] = rf_metrics
-        print(f"Random Forest validation F1: {rf_f1:.4f}")
-    else:
-        rf_f1 = -1.0
-
-    if cb_f1 >= rf_f1 and not args.skip_codebert:
-        report["selected_model"] = "codebert"
-    else:
-        report["selected_model"] = "random_forest"
-
-    report_path = os.path.join(RESULTS_DIR, "phase2_validation_report.json")
-    with open(report_path, "w") as f:
-        json.dump(report, f, indent=2)
-    print(f"Selected model for Phase 3: {report['selected_model']}")
-    print(f"Report saved to {report_path}")
+    except Exception as e:
+        send_chat_log(f"[Phase 2] Error — {type(e).__name__}: {e}")
+        raise
 
 
 if __name__ == "__main__":
