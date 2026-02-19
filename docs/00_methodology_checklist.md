@@ -13,7 +13,6 @@ Use this as your run order and checklist. Details are in [01_data_gathering_and_
 | 1.3 | **Exploration:** Check missing data and class balance; document in doc 01. | **Done** – Checked and documented (1 missing `code`, ~94% / 6% balance). |
 | 1.4 | **Fix missing row:** Drop any row with missing or empty `code` so every sample is valid. | **Done** – Implemented in `phase1_dataset.py` via `drop_missing_code()`. |
 
-**Next action:** Re-run Phase 1 to regenerate `curated_cpp.csv` and `splits.json` with the missing row removed (then you have zero missing data).
 
 ---
 
