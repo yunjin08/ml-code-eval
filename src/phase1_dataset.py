@@ -83,6 +83,19 @@ def standardize_columns(df, split_name):
     return df[["id", "code", "label", "split"]]
 
 
+def drop_missing_code(df):
+    """Drop rows with missing or empty code so we have no missing data / outliers."""
+    if "code" not in df.columns:
+        return df
+    before = len(df)
+    # drop null/NaN and empty string (or whitespace-only)
+    df = df[df["code"].notna() & df["code"].astype(str).str.strip().str.len().gt(0)]
+    dropped = before - len(df)
+    if dropped > 0:
+        print(f"  Dropped {dropped} row(s) with missing or empty code.")
+    return df.reset_index(drop=True)
+
+
 def filter_c_cpp(df, lang_column="lang"):
     """Filter to C and C++ if language column exists."""
     if lang_column not in df.columns:
@@ -109,6 +122,12 @@ def main():
     train_s = standardize_columns(train_df, "train")
     val_s = standardize_columns(val_df, "validation")
     test_s = standardize_columns(test_df, "test")
+
+    # Remove rows with missing or empty code (no missing data / outliers)
+    print("Dropping rows with missing or empty code...")
+    train_s = drop_missing_code(train_s)
+    val_s = drop_missing_code(val_s)
+    test_s = drop_missing_code(test_s)
 
     # Global id across splits
     base = 0

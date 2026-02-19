@@ -18,7 +18,8 @@
    - Input columns: `func` (code), `target` (0/1).  
    - Output columns: `id`, `code`, `label`, `split`.  
    - Global numeric `id` across splits for traceability.
-5. **Write artifacts:**  
+5. **Drop missing/empty code:** Remove any row where `code` is null or empty (so the curated set has no missing data or outliers).  
+6. **Write artifacts:**  
    - `data/curated_cpp.csv` – one row per function.  
    - `data/splits.json` – lists of `id`s for train, validation, and test.
 
@@ -37,14 +38,16 @@ python src/phase1_dataset.py
 
 ### 1.3.2 Missing data
 
+Phase 1 now **drops** any row with missing or empty `code` before writing the curated CSV. After re-running Phase 1:
+
 | Column | Missing count |
 |--------|----------------|
 | `id`   | 0 |
 | `label`| 0 |
 | `split`| 0 |
-| `code` | 1 |
+| `code` | 0 |
 
-**Conclusion:** One row has a missing `code` value. Recommendation: drop that row before training and evaluation (e.g. in Phase 1 or at load time in Phase 2/3) so every sample has valid code and label.
+**Conclusion:** No missing data in the curated set; the single row with missing `code` is removed by `drop_missing_code()` in `phase1_dataset.py`.
 
 ### 1.3.3 Class balance
 
