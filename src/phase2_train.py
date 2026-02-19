@@ -37,7 +37,7 @@ def load_curated():
     return train_df, val_df
 
 
-def train_codebert(train_df, val_df, max_train=None, max_val=None, epochs=3, batch_size=16):
+def train_codebert(train_df, val_df, max_train=None, max_val=None, epochs=3, batch_size=16, use_cpu=False):
     """Fine-tune CodeBERT for binary classification; return model, tokenizer, validation F1."""
     import torch
     from sklearn.metrics import f1_score, precision_score, recall_score
@@ -58,6 +58,10 @@ def train_codebert(train_df, val_df, max_train=None, max_val=None, epochs=3, bat
     model_name = "microsoft/codebert-base"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
+    # Avoid MPS (Apple GPU) OOM on M1/M2/M3 by using CPU when requested
+    if use_cpu:
+        model = model.to("cpu")
+        print("Using CPU for CodeBERT (--cpu). Slower but avoids Metal OOM on Mac.")
 
     max_length = 512
 
@@ -196,6 +200,7 @@ def main():
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--skip_codebert", action="store_true", help="Only train RF")
     parser.add_argument("--skip_rf", action="store_true", help="Only train CodeBERT")
+    parser.add_argument("--cpu", action="store_true", help="Use CPU for CodeBERT (avoids MPS OOM on Apple M1/M2/M3)")
     args = parser.parse_args()
 
     train_df, val_df = load_curated()
@@ -209,6 +214,7 @@ def main():
             train_df, val_df,
             max_train=args.max_train, max_val=args.max_val,
             epochs=args.epochs, batch_size=args.batch_size,
+            use_cpu=args.cpu,
         )
         report["codebert"] = cb_metrics
         print(f"CodeBERT validation F1: {cb_f1:.4f}")

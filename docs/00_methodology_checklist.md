@@ -77,6 +77,39 @@ Use this as your run order and checklist. Details are in [01_data_gathering_and_
 
 ---
 
+## Timeframe and storage (rough guide)
+
+### Timeframe
+
+| Phase | What runs | Rough duration (full data) |
+|-------|-----------|----------------------------|
+| **Phase 1** | Load HF dataset, curate, write CSV | ~1–2 min (network-bound) |
+| **Phase 2** | CodeBERT fine-tuning (264k train, 3 epochs) | **~15–45 h** on GPU; **3–10 days** on CPU only |
+| | Random Forest: lizard features (264k + 33k) then train | **~15–25 h** (CPU-bound; lizard per sample) |
+| | Phase 2 total (sequential) | **~1.5–3 days** with GPU; **~1–2 weeks** CPU-only |
+| **Phase 3** | ML inference on 33k test | Minutes–~1 h |
+| | Semgrep on 33k test samples (~2–3 s each) | **~20–25 h** |
+| | Phase 3 total | **~1 day** |
+| **Phase 4** | Metrics, McNemar, ROC, hypotheses | **&lt; 5 min** |
+
+**End-to-end (full pipeline after Phase 1):** about **2–4 days** with a GPU (Phase 2 + Phase 3 dominate). Without a GPU, Phase 2 alone can be a week or more.
+
+### Storage
+
+| Item | Rough size |
+|------|------------|
+| `data/curated_cpp.csv` (330k rows, long `code`) | **~2–6 GB** |
+| `data/splits.json` | &lt; 10 MB |
+| CodeBERT model + checkpoints (`src/models/codebert*`) | **~1–2 GB** |
+| Random Forest `rf.pkl` | ~10–50 MB |
+| `results/phase3_experiment_results.csv` (33k rows + code) | **~0.5–2 GB** |
+| Other results (reports, configs) | &lt; 50 MB |
+| Hugging Face cache (dataset + CodeBERT) | **~1–2 GB** |
+
+**Total:** plan for **~5–12 GB** free disk (plus OS/tools). The heavy parts are the curated CSV, CodeBERT weights, and (if you keep code in it) the Phase 3 results CSV.
+
+---
+
 ## Recommended run order (to finish the methodology)
 
 ```text

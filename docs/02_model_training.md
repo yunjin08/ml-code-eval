@@ -33,6 +33,16 @@ This document describes how we train and select the ML model used in the governa
 - `--max_train N`, `--max_val N`: Limit number of training/validation samples for quick runs.  
 - **For thesis results:** Do not use these; use the full train/validation sets.
 
+### 2.2.4 Apple Silicon (M1/M2/M3) and MPS OOM
+
+- On Macs with Metal, PyTorch may use MPS (GPU). CodeBERT can hit **out-of-memory** (e.g. `kIOGPUCommandBufferCallbackErrorOutOfMemory`).  
+- **Options:**  
+  - **`--cpu`**: Force CPU for CodeBERT. Slower but avoids Metal OOM.  
+  - **Smaller batch size:** e.g. `--batch_size 4` or `--batch_size 2` to reduce memory use if staying on MPS.  
+- Example short run on M3:  
+  `python src/phase2_train.py --max_train 10000 --max_val 2000 --epochs 1 --cpu`  
+  or with GPU: `... --batch_size 4` (and omit `--cpu` if 4 fits in memory).
+
 ## 2.3 Model 2: Random Forest (baseline)
 
 ### 2.3.1 Features
