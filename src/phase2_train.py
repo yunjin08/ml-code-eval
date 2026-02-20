@@ -60,7 +60,26 @@ def load_curated():
     return train_df, val_df
 
 
-def train_codebert(train_df, val_df, max_train=None, max_val=None, epochs=3, batch_size=16, use_cpu=False):
+def _latest_codebert_checkpoint():
+    """Return path to latest checkpoint in codebert_checkpoint/ or None."""
+    base = os.path.join(MODELS_DIR, "codebert_checkpoint")
+    if not os.path.isdir(base):
+        return None
+    best = None
+    best_step = -1
+    for name in os.listdir(base):
+        if name.startswith("checkpoint-"):
+            try:
+                step = int(name.split("-")[1])
+                if step > best_step and os.path.isdir(os.path.join(base, name)):
+                    best_step = step
+                    best = os.path.join(base, name)
+            except (IndexError, ValueError):
+                continue
+    return best
+
+
+def train_codebert(train_df, val_df, max_train=None, max_val=None, epochs=3, batch_size=16, use_cpu=False, resume_from_checkpoint=None):
     """Fine-tune CodeBERT for binary classification; return model, tokenizer, validation F1."""
     import torch
     from sklearn.metrics import f1_score, precision_score, recall_score
@@ -178,10 +197,20 @@ def train_codebert(train_df, val_df, max_train=None, max_val=None, epochs=3, bat
     )
     n_train = len(train_ds)
     n_val = len(val_ds)
+    if resume_from_checkpoint:
+        if resume_from_checkpoint.lower() == "auto":
+            resume_from_checkpoint = _latest_codebert_checkpoint()
+        if not resume_from_checkpoint or not os.path.isdir(resume_from_checkpoint):
+            raise FileNotFoundError(
+                f"Resume checkpoint not found: {resume_from_checkpoint}. "
+                "Use a path to a checkpoint dir (e.g. src/models/codebert_checkpoint/checkpoint-33050) or ensure 'auto' finds one."
+            )
+        send_chat_log(f"[Phase 2] CodeBERT resuming from {resume_from_checkpoint}")
+        print(f"Resuming from checkpoint: {resume_from_checkpoint}")
     send_chat_log(
         f"[Phase 2] CodeBERT training started — train: {n_train}, val: {n_val}, epochs: {epochs}, batch_size: {batch_size}"
     )
-    trainer.train()
+    trainer.train(resume_from_checkpoint=resume_from_checkpoint)
     eval_out = trainer.evaluate()
     trainer.save_model(os.path.join(MODELS_DIR, "codebert"))
     tokenizer.save_pretrained(os.path.join(MODELS_DIR, "codebert"))
@@ -242,6 +271,12 @@ def main():
     parser.add_argument("--skip_codebert", action="store_true", help="Only train RF")
     parser.add_argument("--skip_rf", action="store_true", help="Only train CodeBERT")
     parser.add_argument("--cpu", action="store_true", help="Use CPU for CodeBERT (avoids MPS OOM on Apple M1/M2/M3)")
+    parser.add_argument(
+        "--resume_from_checkpoint",
+        type=str,
+        default=None,
+        help='Resume CodeBERT from a checkpoint dir (e.g. src/models/codebert_checkpoint/checkpoint-33050). Use "auto" to use latest.',
+    )
     args = parser.parse_args()
 
     send_chat_log(
@@ -262,6 +297,7 @@ def main():
                 max_train=args.max_train, max_val=args.max_val,
                 epochs=args.epochs, batch_size=args.batch_size,
                 use_cpu=args.cpu,
+                resume_from_checkpoint=args.resume_from_checkpoint,
             )
             report["codebert"] = cb_metrics
             print(f"CodeBERT validation F1: {cb_f1:.4f}")
