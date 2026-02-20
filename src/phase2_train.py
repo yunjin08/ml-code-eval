@@ -7,6 +7,8 @@ Benchmark both on validation set; select the model with higher F1 for Phase 3.
 import argparse
 import json
 import os
+import shutil
+import subprocess
 import sys
 import urllib.request
 
@@ -60,6 +62,44 @@ def load_curated():
     return train_df, val_df
 
 
+def _push_checkpoints_to_kaggle_dataset(out_dir: str, dataset_slug: str, message: str) -> bool:
+    """Copy checkpoints to a staging dir and push as new version of Kaggle Dataset. Returns True if ok."""
+    staging = "/kaggle/working/phase2_checkpoint_backup"
+    if not os.path.isdir("/kaggle/working"):
+        return False  # not on Kaggle
+    try:
+        if os.path.isdir(staging):
+            shutil.rmtree(staging)
+        os.makedirs(staging, exist_ok=True)
+        for name in os.listdir(out_dir):
+            src = os.path.join(out_dir, name)
+            if os.path.isdir(src):
+                shutil.copytree(src, os.path.join(staging, name))
+            else:
+                shutil.copy2(src, os.path.join(staging, name))
+        meta = {
+            "title": "Phase 2 CodeBERT checkpoints",
+            "id": dataset_slug,
+            "licenses": [{"name": "CC0-1.0"}],
+        }
+        with open(os.path.join(staging, "dataset-metadata.json"), "w") as f:
+            json.dump(meta, f, indent=2)
+        r = subprocess.run(
+            ["kaggle", "datasets", "version", "-p", staging, "-m", message],
+            capture_output=True,
+            text=True,
+            timeout=600,
+        )
+        if r.returncode != 0:
+            print(f"[Phase 2] Kaggle backup warning: {r.stderr or r.stdout}")
+            return False
+        print(f"[Phase 2] Checkpoints backed up to Kaggle dataset {dataset_slug}")
+        return True
+    except Exception as e:
+        print(f"[Phase 2] Kaggle backup failed: {e}")
+        return False
+
+
 def _latest_codebert_checkpoint():
     """Return path to latest checkpoint in codebert_checkpoint/ or None."""
     base = os.path.join(MODELS_DIR, "codebert_checkpoint")
@@ -79,7 +119,7 @@ def _latest_codebert_checkpoint():
     return best
 
 
-def train_codebert(train_df, val_df, max_train=None, max_val=None, epochs=3, batch_size=16, use_cpu=False, resume_from_checkpoint=None):
+def train_codebert(train_df, val_df, max_train=None, max_val=None, epochs=3, batch_size=16, use_cpu=False, resume_from_checkpoint=None, backup_to_kaggle_dataset=None):
     """Fine-tune CodeBERT for binary classification; return model, tokenizer, validation F1."""
     import torch
     from sklearn.metrics import f1_score, precision_score, recall_score
@@ -103,6 +143,17 @@ def train_codebert(train_df, val_df, max_train=None, max_val=None, epochs=3, bat
             send_chat_log(
                 f"[Phase 2] CodeBERT epoch {epoch:.1f} — eval_f1: {f1:.4f}, eval_loss: {loss:.4f}"
             )
+
+    class KaggleBackupCallback(TrainerCallback):
+        def __init__(self, out_dir, dataset_slug):
+            self.out_dir = out_dir
+            self.dataset_slug = dataset_slug
+
+        def on_save(self, args, state, control, **kwargs):
+            if not self.dataset_slug:
+                return
+            msg = f"checkpoint step {state.global_step}"
+            _push_checkpoints_to_kaggle_dataset(self.out_dir, self.dataset_slug, msg)
 
     if max_train:
         train_df = train_df.sample(n=max_train, random_state=42)
@@ -173,6 +224,10 @@ def train_codebert(train_df, val_df, max_train=None, max_val=None, epochs=3, bat
         }
 
     out_dir = os.path.join(MODELS_DIR, "codebert_checkpoint")
+    callbacks_list = [ChatLogCallback()]
+    if backup_to_kaggle_dataset:
+        callbacks_list.append(KaggleBackupCallback(out_dir, backup_to_kaggle_dataset))
+        print(f"[Phase 2] Checkpoints will be backed up to Kaggle dataset: {backup_to_kaggle_dataset}")
     training_args = TrainingArguments(
         output_dir=out_dir,
         num_train_epochs=epochs,
@@ -193,7 +248,7 @@ def train_codebert(train_df, val_df, max_train=None, max_val=None, epochs=3, bat
         train_dataset=train_ds,
         eval_dataset=val_ds,
         compute_metrics=compute_metrics,
-        callbacks=[ChatLogCallback()],
+        callbacks=callbacks_list,
     )
     n_train = len(train_ds)
     n_val = len(val_ds)
@@ -277,6 +332,12 @@ def main():
         default=None,
         help='Resume CodeBERT from a checkpoint dir (e.g. src/models/codebert_checkpoint/checkpoint-33050). Use "auto" to use latest.',
     )
+    parser.add_argument(
+        "--backup_to_kaggle_dataset",
+        type=str,
+        default=None,
+        help="On Kaggle: after each epoch save, push checkpoints to this dataset (e.g. YOUR_USERNAME/code-reviewer-thesis-phase2-checkpoints). Dataset must exist; create it once on Kaggle.",
+    )
     args = parser.parse_args()
 
     send_chat_log(
@@ -298,6 +359,7 @@ def main():
                 epochs=args.epochs, batch_size=args.batch_size,
                 use_cpu=args.cpu,
                 resume_from_checkpoint=args.resume_from_checkpoint,
+                backup_to_kaggle_dataset=args.backup_to_kaggle_dataset,
             )
             report["codebert"] = cb_metrics
             print(f"CodeBERT validation F1: {cb_f1:.4f}")
