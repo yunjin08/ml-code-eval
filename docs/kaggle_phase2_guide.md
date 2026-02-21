@@ -2,6 +2,8 @@
 
 Use Kaggle’s free GPU (P100) to run Phase 2 in ~5–7 hours instead of days on CPU.
 
+**Important:** Kaggle’s `/kaggle/working/` is **temporary**. If the session dies (timeout, refresh, disconnect), everything there—including checkpoints—is **gone**. Save checkpoints to a **Dataset** (see below) so you can resume in a new session instead of starting over.
+
 ---
 
 ## Step 1: Create a Kaggle account
@@ -113,6 +115,32 @@ Do **not** pass `--cpu`; the notebook is using the GPU. If you see a CUDA/GPU er
 
 Run the cell. Training will take about **5–7 hours** with GPU. You can leave the tab open or check back later (Kaggle may disconnect after idle; long-running sessions usually keep going).
 
+**As soon as at least one epoch has finished**, run the next section so checkpoints are saved to a Dataset. If you can’t run another cell while training (UI stuck), do it **as soon as the run stops or finishes**—before you refresh or leave the session.
+
+---
+
+## Step 6b: Save checkpoints to a Dataset (do this so you don’t lose them)
+
+Checkpoints only exist in `/kaggle/working/`. If the session dies or you refresh, they’re gone. Save them to a **Kaggle Dataset** so you can resume in a new session.
+
+**When to run this:** After training finishes, or after you stop the run (so whatever checkpoints exist are saved). Run this in a **new cell** while you’re still in the same session.
+
+**1. Zip the checkpoint folder** (run in a cell):
+
+```python
+%cd /kaggle/working/code-reviewer-thesis
+!zip -r /kaggle/working/codebert_checkpoints.zip src/models/codebert_checkpoint
+```
+
+**2. Save that zip as a Dataset** so it persists:
+
+- **Option A (UI):** In the right-hand **Output** panel, find `codebert_checkpoints.zip` under `/kaggle/working/`. Right-click it → **Save as Dataset** (or use the **Save version** dropdown and choose to save output). Name it e.g. `code-reviewer-thesis-phase2-checkpoints`.
+- **Option B (API):** If you have Kaggle API set up in the notebook (e.g. API key in `/kaggle/input/` or env), you can create a dataset from the zip; for most users, Option A is enough.
+
+**3. Note the Dataset name** (e.g. `YOUR_USERNAME/code-reviewer-thesis-phase2-checkpoints`). You’ll add it as input when you want to resume.
+
+**Repeat after more progress if you want:** If you stop the run again later (e.g. after epoch 2), run the zip cell again and save a new version of the Dataset so the latest checkpoints are backed up.
+
 ---
 
 ## Step 7: Save the results
@@ -168,5 +196,24 @@ Kaggle notebooks can time out after long idle. To reduce the chance:
 ```
 
 (Replace `checkpoint-33050` with the latest you see from `!ls src/models/codebert_checkpoint/`.)
+
+**Resuming in a new session (after you lost the previous one):** If you had saved checkpoints to a Dataset (Step 6b), you can resume without starting from 0:
+
+1. **New notebook** (or same notebook after session was reset). Add **two** datasets: your phase2 data (e.g. `code-reviewer-thesis-phase2-data`) and your checkpoints dataset (e.g. `code-reviewer-thesis-phase2-checkpoints`).
+2. Do **Step 4** (clone or unzip repo) and **Step 5** (data path, copy data, pip install) as usual. Set the checkpoints input path, e.g.:
+   ```python
+   CHECKPOINTS_IN = "/kaggle/input/code-reviewer-thesis-phase2-checkpoints"  # or .../version/N
+   ```
+3. **Unzip the checkpoints** into the project so the script can find them:
+   ```python
+   !cd /kaggle/working/code-reviewer-thesis && unzip -o "$CHECKPOINTS_IN/codebert_checkpoints.zip" -d .
+   ```
+   (If the zip contains `src/models/codebert_checkpoint/`, this puts them in the right place.)
+4. Run Phase 2 **with resume**:
+   ```python
+   %cd /kaggle/working/code-reviewer-thesis
+   !python src/phase2_train.py --epochs 3 --batch_size 16 --resume_from_checkpoint auto
+   ```
+5. After this run, **save checkpoints to the Dataset again** (Step 6b) so you don’t lose them if the session dies again.
 
 Using `--epochs 1` or `--max_train 50000` can shorten the run for a quick test.

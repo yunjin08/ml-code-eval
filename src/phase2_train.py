@@ -63,7 +63,9 @@ def load_curated():
 
 
 def _push_checkpoints_to_kaggle_dataset(out_dir: str, dataset_slug: str, message: str) -> bool:
-    """Copy checkpoints to a staging dir and push as new version of Kaggle Dataset. Returns True if ok."""
+    """Zip checkpoints and push as new version of Kaggle Dataset. Returns True if ok."""
+    import zipfile
+
     staging = "/kaggle/working/phase2_checkpoint_backup"
     if not os.path.isdir("/kaggle/working"):
         return False  # not on Kaggle
@@ -71,12 +73,17 @@ def _push_checkpoints_to_kaggle_dataset(out_dir: str, dataset_slug: str, message
         if os.path.isdir(staging):
             shutil.rmtree(staging)
         os.makedirs(staging, exist_ok=True)
-        for name in os.listdir(out_dir):
-            src = os.path.join(out_dir, name)
-            if os.path.isdir(src):
-                shutil.copytree(src, os.path.join(staging, name))
-            else:
-                shutil.copy2(src, os.path.join(staging, name))
+        zip_path = os.path.join(staging, "codebert_checkpoints.zip")
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for name in os.listdir(out_dir):
+                src = os.path.join(out_dir, name)
+                if os.path.isdir(src):
+                    for root, _, files in os.walk(src):
+                        for f in files:
+                            path = os.path.join(root, f)
+                            zf.write(path, os.path.relpath(path, os.path.dirname(out_dir)))
+                else:
+                    zf.write(src, name)
         meta = {
             "title": "Phase 2 CodeBERT checkpoints",
             "id": dataset_slug,
