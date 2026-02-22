@@ -91,10 +91,28 @@ def get_ml_confidence_rf(test_df):
     return probs
 
 
-def get_pac_scores(test_df):
+def _pac_one(args):
+    """Worker for parallel PaC: (code, ext) -> score. Must be top-level for multiprocessing."""
+    code, ext = args
     from utils.semgrep_runner import run_semgrep_on_code
+    _, score = run_semgrep_on_code(code, ext)
+    return score
+
+
+def get_pac_scores(test_df, workers=1):
     from tqdm import tqdm
 
+    if workers is not None and workers > 1:
+        from concurrent.futures import ProcessPoolExecutor
+        tasks = [(row["code"], ".c") for _, row in test_df.iterrows()]
+        with ProcessPoolExecutor(max_workers=workers) as ex:
+            scores = list(tqdm(
+                ex.map(_pac_one, tasks, chunksize=min(10, max(1, len(tasks) // (workers * 4)))),
+                total=len(tasks),
+                desc="PaC",
+            ))
+        return np.array(scores)
+    from utils.semgrep_runner import run_semgrep_on_code
     scores = []
     for _, row in tqdm(test_df.iterrows(), total=len(test_df), desc="PaC"):
         _, score = run_semgrep_on_code(row["code"], ".c")
@@ -139,6 +157,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--max_test", type=int, default=None, help="Cap test set size")
     parser.add_argument("--max_val", type=int, default=2000, help="Cap val size for hybrid tuning")
+    parser.add_argument("--workers", type=int, default=4, help="Parallel workers for PaC (Semgrep). Use 1 for sequential.")
     args = parser.parse_args()
 
     test_df, val_df, _ = load_splits_and_test()
@@ -156,7 +175,7 @@ def main():
     test_df["ml_confidence"] = ml_confidence
 
     # PaC scores on test
-    pac_scores = get_pac_scores(test_df)
+    pac_scores = get_pac_scores(test_df, workers=args.workers)
     test_df["pac_score"] = pac_scores
 
     # Tune hybrid on validation (small subset)
@@ -165,8 +184,7 @@ def main():
         val_ml = get_ml_confidence_codebert(val_sub)
     else:
         val_ml = get_ml_confidence_rf(val_sub)
-    from utils.semgrep_runner import run_semgrep_on_code as _semgrep_run
-    val_pac = np.array([_semgrep_run(row["code"], ".c")[1] for _, row in val_sub.iterrows()])
+    val_pac = get_pac_scores(val_sub, workers=args.workers)
     alpha, beta, t_block, t_review = tune_hybrid_on_val(val_ml, val_pac, val_sub["label"].values)
 
     # Hybrid risk and decisions on test

@@ -18,6 +18,7 @@ eggs/
 # Data (large files; re-run phase1_dataset.py to regenerate)
 data/*.csv
 data/*.parquet
+data.zip
 
 # Models and checkpoints (re-run phase2_train.py to regenerate)
 src/models/
@@ -28,6 +29,9 @@ src/models/
 
 # Results (re-run phase3/phase4 to regenerate)
 results/
+
+# Local Kaggle Phase 2 output (large; use Kaggle Dataset for sharing)
+kaggle-ml-results/
 
 # IDE
 .idea/
