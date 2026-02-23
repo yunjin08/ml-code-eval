@@ -26,15 +26,11 @@ def run_semgrep_on_code(code: str, ext: str = ".c") -> tuple[int, float]:
         f.write(code)
         path = f.name
     try:
-        cmd = [
-            "semgrep",
-            "scan",
-            "--config", SEMGREP_CONFIGS[0],  # p/c for C/C++; other configs may have fewer C rules
-            "--json",
-            "--quiet",
-            "--no-git-ignore",
-            path,
-        ]
+        # Use multiple configs for broader C/C++ coverage (p/c, cwe-top-25, owasp)
+        cmd = ["semgrep", "scan", "--json", "--quiet", "--no-git-ignore"]
+        for cfg in SEMGREP_CONFIGS:
+            cmd.extend(["--config", cfg])
+        cmd.append(path)
         result = subprocess.run(
             cmd,
             capture_output=True,
