@@ -22,6 +22,10 @@ MODELS_DIR = os.path.join(SCRIPT_DIR, "models")
 RESULTS_DIR = os.path.join(PROJECT_ROOT, "results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
+# PaC progress (for --resume): save every N test samples so run can resume if interrupted
+PHASE3_PAC_PROGRESS_PATH = os.path.join(RESULTS_DIR, "phase3_pac_progress.npz")
+PAC_SAVE_EVERY_N = 5000
+
 
 def load_splits_and_test():
     with open(os.path.join(DATA_DIR, "splits.json")) as f:
@@ -158,6 +162,7 @@ def main():
     parser.add_argument("--max_test", type=int, default=None, help="Cap test set size")
     parser.add_argument("--max_val", type=int, default=2000, help="Cap val size for hybrid tuning")
     parser.add_argument("--workers", type=int, default=4, help="Parallel workers for PaC (Semgrep). Use 1 for sequential.")
+    parser.add_argument("--resume", action="store_true", help="Resume PaC from last saved progress if interrupted (saves every 5k samples).")
     args = parser.parse_args()
 
     test_df, val_df, _ = load_splits_and_test()
@@ -174,8 +179,50 @@ def main():
     test_df = test_df.copy()
     test_df["ml_confidence"] = ml_confidence
 
-    # PaC scores on test
-    pac_scores = get_pac_scores(test_df, workers=args.workers)
+    # PaC scores on test (with optional resume: save progress every PAC_SAVE_EVERY_N, resume from file if --resume)
+    n_total = len(test_df)
+    pac_scores_partial = None
+    n_done = 0
+    if args.resume and os.path.isfile(PHASE3_PAC_PROGRESS_PATH):
+        try:
+            with np.load(PHASE3_PAC_PROGRESS_PATH, allow_pickle=False) as data:
+                pac_scores_partial = np.array(data["scores"], dtype=np.float64)
+                file_n_total = int(data["n_total"])
+            if file_n_total == n_total and len(pac_scores_partial) <= n_total:
+                n_done = len(pac_scores_partial)
+                if n_done == n_total:
+                    print(f"Resumed: PaC scores already complete ({n_total} samples).")
+                else:
+                    print(f"Resuming PaC from {n_done}/{n_total} samples.")
+            else:
+                pac_scores_partial = None
+                n_done = 0
+        except (Exception, OSError):
+            pac_scores_partial = None
+            n_done = 0
+
+    if pac_scores_partial is None:
+        pac_scores_partial = np.array([], dtype=np.float64)
+        n_done = 0
+
+    if n_done < n_total:
+        remaining_df = test_df.iloc[n_done:]
+        for start in range(0, len(remaining_df), PAC_SAVE_EVERY_N):
+            end = min(start + PAC_SAVE_EVERY_N, len(remaining_df))
+            chunk_df = remaining_df.iloc[start:end]
+            chunk_scores = get_pac_scores(chunk_df, workers=args.workers)
+            pac_scores_partial = np.concatenate([pac_scores_partial, chunk_scores])
+            if args.resume:
+                np.savez(PHASE3_PAC_PROGRESS_PATH, scores=pac_scores_partial, n_total=n_total)
+                print(f"PaC progress saved: {len(pac_scores_partial)}/{n_total}")
+
+    pac_scores = pac_scores_partial
+    if args.resume and os.path.isfile(PHASE3_PAC_PROGRESS_PATH):
+        try:
+            os.remove(PHASE3_PAC_PROGRESS_PATH)
+        except OSError:
+            pass
+
     test_df["pac_score"] = pac_scores
 
     # Tune hybrid on validation (small subset)
