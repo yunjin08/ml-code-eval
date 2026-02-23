@@ -48,6 +48,7 @@ def load_selected_model():
 def get_ml_confidence_codebert(test_df, batch_size=16):
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
     import torch
+    from tqdm import tqdm
 
     model_path = os.path.join(MODELS_DIR, "codebert")
     if not os.path.isdir(model_path):
@@ -59,7 +60,8 @@ def get_ml_confidence_codebert(test_df, batch_size=16):
     model.to(device)
     max_length = 512
     confidences = []
-    for start in range(0, len(test_df), batch_size):
+    n_batches = (len(test_df) + batch_size - 1) // batch_size
+    for start in tqdm(range(0, len(test_df), batch_size), total=n_batches, desc="ML (CodeBERT)"):
         batch = test_df.iloc[start : start + batch_size]
         enc = tokenizer(
             batch["code"].tolist(),
