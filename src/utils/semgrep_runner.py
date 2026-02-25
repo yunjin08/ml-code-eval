@@ -17,7 +17,14 @@ NORMALIZE_K = 10.0
 
 
 def _semgrep_exe() -> str:
-    """Prefer semgrep from same env as Python (e.g. venv/bin/semgrep)."""
+    """Resolve semgrep: prefer PATH (Kaggle/CI), then same dir as Python (venv)."""
+    try:
+        import shutil
+        found = shutil.which("semgrep")
+        if found and os.path.isfile(found):
+            return found
+    except Exception:
+        pass
     exe_dir = os.path.dirname(os.path.abspath(sys.executable))
     candidate = os.path.join(exe_dir, "semgrep")
     if os.path.isfile(candidate):
