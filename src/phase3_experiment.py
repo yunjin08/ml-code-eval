@@ -165,7 +165,25 @@ def main():
     parser.add_argument("--max_val", type=int, default=2000, help="Cap val size for hybrid tuning")
     parser.add_argument("--workers", type=int, default=4, help="Parallel workers for PaC (Semgrep). Use 1 for sequential.")
     parser.add_argument("--resume", action="store_true", help="Resume PaC from last saved progress if interrupted (saves every 5k samples).")
+    parser.add_argument("--no_verify_pac", action="store_true", help="Skip PaC setup verification (not recommended; use only if you already verified).")
     args = parser.parse_args()
+
+    # Verify PaC (Semgrep) works before trusting any PaC results
+    if not args.no_verify_pac:
+        if SCRIPT_DIR not in sys.path:
+            sys.path.insert(0, SCRIPT_DIR)
+        try:
+            from verify_pac_setup import run_verification
+            passed, failures = run_verification()
+            if not passed:
+                print("PaC verification FAILED. Fix Semgrep setup or run: python src/verify_pac_setup.py")
+                for msg in failures:
+                    print(f"  {msg}")
+                sys.exit(1)
+            print("PaC verification passed.")
+        except Exception as e:
+            print(f"PaC verification error: {e}")
+            sys.exit(1)
 
     test_df, val_df, _ = load_splits_and_test()
     if args.max_test:

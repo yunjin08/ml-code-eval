@@ -4,6 +4,7 @@ Return violation count and optional normalized score in [0, 1].
 """
 
 import os
+import sys
 import subprocess
 import tempfile
 
@@ -13,6 +14,15 @@ SEMGREP_CONFIGS = ["p/c", "p/owasp-top-ten", "p/cwe-top-25"]
 
 # Cap for normalizing violation count to [0,1]: V_PaC = min(1, count / K)
 NORMALIZE_K = 10.0
+
+
+def _semgrep_exe() -> str:
+    """Prefer semgrep from same env as Python (e.g. venv/bin/semgrep)."""
+    exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+    candidate = os.path.join(exe_dir, "semgrep")
+    if os.path.isfile(candidate):
+        return candidate
+    return "semgrep"
 
 
 def run_semgrep_on_code(code: str, ext: str = ".c") -> tuple[int, float]:
@@ -27,7 +37,7 @@ def run_semgrep_on_code(code: str, ext: str = ".c") -> tuple[int, float]:
         path = f.name
     try:
         # Use multiple configs for broader C/C++ coverage (p/c, cwe-top-25, owasp)
-        cmd = ["semgrep", "scan", "--json", "--quiet", "--no-git-ignore"]
+        cmd = [_semgrep_exe(), "scan", "--json", "--quiet", "--no-git-ignore"]
         for cfg in SEMGREP_CONFIGS:
             cmd.extend(["--config", cfg])
         cmd.append(path)
@@ -39,15 +49,16 @@ def run_semgrep_on_code(code: str, ext: str = ".c") -> tuple[int, float]:
             cwd=os.path.dirname(path),
         )
         count = 0
-        if result.returncode == 0 and result.stdout:
+        # Semgrep returns exit 1 when it finds issues; JSON is still in stdout
+        if result.stdout:
             import json
             try:
                 data = json.loads(result.stdout)
                 count = len(data.get("results", []))
             except (json.JSONDecodeError, TypeError):
                 pass
-        # Semgrep returns 1 on findings when using --json in some versions
-        if result.returncode != 0 and result.stderr and "findings" in result.stderr.lower():
+        # Fallback: exit 1 + "findings" in stderr when JSON parse fails
+        if count == 0 and result.returncode != 0 and result.stderr and "findings" in result.stderr.lower():
             count = 1
         score = min(1.0, count / NORMALIZE_K)
         return count, score
