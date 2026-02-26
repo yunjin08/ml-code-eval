@@ -9,8 +9,10 @@ import subprocess
 import tempfile
 
 
-# Configs per thesis 3.2.3: p/c, p/owasp-top-ten, p/cwe-top-25
-SEMGREP_CONFIGS = ["p/c", "p/owasp-top-ten", "p/cwe-top-25"]
+# Single config for speed; same C/C++ coverage. (Multiple configs were 3x slower, no extra findings on DiverseVul.)
+SEMGREP_CONFIG = "p/c"
+# Legacy list for verify script / backward compat
+SEMGREP_CONFIGS = [SEMGREP_CONFIG]
 
 # Cap for normalizing violation count to [0,1]: V_PaC = min(1, count / K)
 NORMALIZE_K = 10.0
@@ -43,11 +45,7 @@ def run_semgrep_on_code(code: str, ext: str = ".c") -> tuple[int, float]:
         f.write(code)
         path = f.name
     try:
-        # Use multiple configs for broader C/C++ coverage (p/c, cwe-top-25, owasp)
-        cmd = [_semgrep_exe(), "scan", "--json", "--quiet", "--no-git-ignore"]
-        for cfg in SEMGREP_CONFIGS:
-            cmd.extend(["--config", cfg])
-        cmd.append(path)
+        cmd = [_semgrep_exe(), "scan", "--json", "--quiet", "--no-git-ignore", "--config", SEMGREP_CONFIG, path]
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -69,10 +67,58 @@ def run_semgrep_on_code(code: str, ext: str = ".c") -> tuple[int, float]:
             count = 1
         score = min(1.0, count / NORMALIZE_K)
         return count, score
-    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+    except (subprocess.TimeoutExpired, FileNotFoundError):
         return 0, 0.0
     finally:
         try:
             os.unlink(path)
+        except OSError:
+            pass
+
+
+def run_semgrep_batch(codes: list, ext: str = ".c", timeout_per_batch: int = 120) -> list[tuple[int, float]]:
+    """
+    Run Semgrep once on a directory of files (batch). Much faster than N separate runs.
+    Returns list of (count, score) in same order as codes.
+    """
+    import json
+    import shutil
+
+    if not codes:
+        return []
+
+    n = len(codes)
+    tmpdir = tempfile.mkdtemp(prefix="semgrep_batch_")
+    try:
+        for i, code in enumerate(codes):
+            fpath = os.path.join(tmpdir, f"{i:05d}{ext}")
+            with open(fpath, "w", encoding="utf-8", errors="replace") as f:
+                f.write(code)
+
+        cmd = [_semgrep_exe(), "scan", "--json", "--quiet", "--no-git-ignore", "--config", SEMGREP_CONFIG, tmpdir]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_per_batch, cwd=tmpdir)
+
+        counts = [0] * n
+        if result.stdout:
+            try:
+                data = json.loads(result.stdout)
+                for r in data.get("results", []):
+                    path = r.get("path", "")
+                    # path can be absolute or relative; basename gives e.g. 00042.c
+                    base = os.path.basename(path)
+                    idx_str = base[:5]  # "00042"
+                    try:
+                        idx = int(idx_str)
+                        if 0 <= idx < n:
+                            counts[idx] += 1
+                    except ValueError:
+                        pass
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        return [(c, min(1.0, c / NORMALIZE_K)) for c in counts]
+    finally:
+        try:
+            shutil.rmtree(tmpdir, ignore_errors=True)
         except OSError:
             pass

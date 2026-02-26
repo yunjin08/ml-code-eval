@@ -105,8 +105,21 @@ def _pac_one(args):
     return score
 
 
-def get_pac_scores(test_df, workers=1):
+def get_pac_scores(test_df, workers=1, pac_batch_size=0):
     from tqdm import tqdm
+    from utils.semgrep_runner import run_semgrep_batch
+
+    # Batched mode: one Semgrep run per N files (much faster than 1 run per file)
+    if pac_batch_size and int(pac_batch_size) > 1:
+        batch_size = int(pac_batch_size)
+        codes = test_df["code"].tolist()
+        scores = []
+        n_batches = (len(codes) + batch_size - 1) // batch_size
+        for start in tqdm(range(0, len(codes), batch_size), total=n_batches, desc="PaC"):
+            batch = codes[start : start + batch_size]
+            batch_results = run_semgrep_batch(batch, ".c")
+            scores.extend(score for _, score in batch_results)
+        return np.array(scores)
 
     if workers is not None and workers > 1:
         from concurrent.futures import ProcessPoolExecutor
@@ -166,6 +179,7 @@ def main():
     parser.add_argument("--workers", type=int, default=4, help="Parallel workers for PaC (Semgrep). Use 1 for sequential.")
     parser.add_argument("--resume", action="store_true", help="Resume PaC from last saved progress if interrupted (saves every 5k samples).")
     parser.add_argument("--no_verify_pac", action="store_true", help="Skip PaC setup verification (not recommended; use only if you already verified).")
+    parser.add_argument("--pac_batch_size", type=int, default=100, help="Run Semgrep on N files per process (default 100). Set 0 for per-file mode (slower).")
     args = parser.parse_args()
 
     # Verify PaC (Semgrep) works before trusting any PaC results
@@ -230,7 +244,7 @@ def main():
         for start in range(0, len(remaining_df), PAC_SAVE_EVERY_N):
             end = min(start + PAC_SAVE_EVERY_N, len(remaining_df))
             chunk_df = remaining_df.iloc[start:end]
-            chunk_scores = get_pac_scores(chunk_df, workers=args.workers)
+            chunk_scores = get_pac_scores(chunk_df, workers=args.workers, pac_batch_size=args.pac_batch_size)
             pac_scores_partial = np.concatenate([pac_scores_partial, chunk_scores])
             if args.resume:
                 np.savez(PHASE3_PAC_PROGRESS_PATH, scores=pac_scores_partial, n_total=n_total)
@@ -251,7 +265,7 @@ def main():
         val_ml = get_ml_confidence_codebert(val_sub)
     else:
         val_ml = get_ml_confidence_rf(val_sub)
-    val_pac = get_pac_scores(val_sub, workers=args.workers)
+    val_pac = get_pac_scores(val_sub, workers=args.workers, pac_batch_size=args.pac_batch_size)
     alpha, beta, t_block, t_review = tune_hybrid_on_val(val_ml, val_pac, val_sub["label"].values)
 
     # Hybrid risk and decisions on test
