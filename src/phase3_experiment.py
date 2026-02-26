@@ -7,7 +7,10 @@ Output: ml_confidence, pac_score, hybrid_risk, decision_ml, decision_pac, decisi
 import argparse
 import json
 import os
+import shutil
+import subprocess
 import sys
+import zipfile
 
 import numpy as np
 import pandas as pd
@@ -25,6 +28,44 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 # PaC progress (for --resume): save every N test samples so run can resume if interrupted
 PHASE3_PAC_PROGRESS_PATH = os.path.join(RESULTS_DIR, "phase3_pac_progress.npz")
 PAC_SAVE_EVERY_N = 5000
+
+
+def _push_phase3_results_to_kaggle_dataset(results_dir: str, dataset_slug: str, message: str) -> bool:
+    """Zip Phase 3 results and push as new version of Kaggle Dataset. Returns True if ok."""
+    staging = "/kaggle/working/phase3_results_backup"
+    if not os.path.isdir("/kaggle/working"):
+        return False
+    try:
+        if os.path.isdir(staging):
+            shutil.rmtree(staging)
+        os.makedirs(staging, exist_ok=True)
+        zip_path = os.path.join(staging, "phase3_results.zip")
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for name in ("phase3_experiment_results.csv", "phase3_hybrid_config.json", "phase2_validation_report.json"):
+                src = os.path.join(results_dir, name)
+                if os.path.isfile(src):
+                    zf.write(src, name)
+        meta = {
+            "title": "Phase 3 experiment results",
+            "id": dataset_slug,
+            "licenses": [{"name": "CC0-1.0"}],
+        }
+        with open(os.path.join(staging, "dataset-metadata.json"), "w") as f:
+            json.dump(meta, f, indent=2)
+        r = subprocess.run(
+            ["kaggle", "datasets", "version", "-p", staging, "-m", message],
+            capture_output=True,
+            text=True,
+            timeout=600,
+        )
+        if r.returncode != 0:
+            print(f"[Phase 3] Kaggle backup warning: {r.stderr or r.stdout}")
+            return False
+        print(f"[Phase 3] Results backed up to Kaggle dataset: {dataset_slug}")
+        return True
+    except Exception as e:
+        print(f"[Phase 3] Kaggle backup failed: {e}")
+        return False
 
 
 def load_splits_and_test():
@@ -180,6 +221,7 @@ def main():
     parser.add_argument("--resume", action="store_true", help="Resume PaC from last saved progress if interrupted (saves every 5k samples).")
     parser.add_argument("--no_verify_pac", action="store_true", help="Skip PaC setup verification (not recommended; use only if you already verified).")
     parser.add_argument("--pac_batch_size", type=int, default=100, help="Run Semgrep on N files per process (default 100). Set 0 for per-file mode (slower).")
+    parser.add_argument("--backup_to_kaggle_dataset", type=str, default=None, help="Push results to Kaggle Dataset when done (e.g. USERNAME/code-reviewer-thesis-phase3-results). Saves phase3 CSV + config so you can find them after session reset.")
     args = parser.parse_args()
 
     # Verify PaC (Semgrep) works before trusting any PaC results
@@ -282,6 +324,14 @@ def main():
         json.dump({"alpha": alpha, "beta": beta, "t_block": t_block, "t_review": t_review}, f, indent=2)
     print(f"Results saved to {out_path}")
     print(f"Hybrid config: alpha={alpha}, beta={beta}, t_block={t_block}, t_review={t_review}")
+
+    if args.backup_to_kaggle_dataset:
+        print("Backing up results to Kaggle Dataset...")
+        _push_phase3_results_to_kaggle_dataset(
+            RESULTS_DIR,
+            args.backup_to_kaggle_dataset,
+            "Phase 3 experiment results (auto-save)",
+        )
 
 
 if __name__ == "__main__":
