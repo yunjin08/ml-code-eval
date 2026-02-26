@@ -154,26 +154,30 @@ You should see `phase2_validation_report.json` and in `codebert/`: `config.json`
 
 ## Step 5: Run Phase 3 (full test)
 
-No `--max_test` or `--max_val` cap: use the full test set and default validation sample for hybrid tuning. Use multiple workers so PaC (Semgrep) runs in parallel.
+No `--max_test` or `--max_val` cap: use the full test set and default validation sample for hybrid tuning. **Use `--backup_to_kaggle_dataset`** so results are saved to a Kaggle Dataset automatically when the run finishes (you can find them after a session reset under **Your Datasets**).
 
 ```python
 %cd /kaggle/working/code-reviewer-thesis
-!python src/phase3_experiment.py --workers 8
+# Replace YOUR_KAGGLE_USERNAME with your Kaggle username (e.g. donairejededison)
+!python src/phase3_experiment.py --workers 8 --resume --backup_to_kaggle_dataset YOUR_KAGGLE_USERNAME/code-reviewer-thesis-phase3-results
 ```
 
 - **Full test:** ~33k samples (no `--max_test`).
-- **Default `--max_val`** is 2000 (enough for hybrid tuning).
-- **`--workers 8`** uses 8 parallel Semgrep processes (adjust down if you get resource errors).
+- **`--resume`** saves PaC progress every 5k samples so you can resume if the session dies.
+- **`--backup_to_kaggle_dataset** pushes the results (CSV + config) to a Kaggle Dataset when the run completes. You can find it under **Datasets → Your Datasets** (e.g. `code-reviewer-thesis-phase3-results`).
+- **`--workers 8`** — adjust if needed.
 
-Expect roughly **1–2 hours** total on a Kaggle GPU notebook (CodeBERT on GPU + 8 PaC workers).
+Expect roughly **2–4 hours** with batched PaC (default).
 
 ---
 
-## Step 6: Download results
+## Step 6: Get results
 
-Outputs are under `/kaggle/working/code-reviewer-thesis/results/`:
+If you used **`--backup_to_kaggle_dataset`**, the results are already in a Kaggle Dataset. Go to **Datasets → Your Datasets** and open the dataset you specified (e.g. `code-reviewer-thesis-phase3-results`). Download `phase3_results.zip` or add the dataset to a new notebook and copy the CSV from `/kaggle/input/YOUR_DATASET_NAME/`.
 
-- `phase3_experiment_results.csv` — main experiment results (ml_confidence, pac_score, hybrid_risk, decisions, label).
+If you did not use backup, outputs are under `/kaggle/working/code-reviewer-thesis/results/`:
+
+- `phase3_experiment_results.csv` — main experiment results.
 - `phase3_hybrid_config.json` — chosen alpha, beta, t_block, t_review.
 
 **Option A – Zip and download from UI**
