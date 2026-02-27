@@ -1,9 +1,9 @@
 # Deploy the thesis showcase app to Netlify.
-# Connect this repo at netlify.com → New site from Git → pick this repo.
-# Netlify will serve the showcase folder as the site root.
+# Build runs from showcase/ only — Netlify never sees Python/requirements.txt.
 
 [build]
-  publish = "showcase"
+  base = "showcase"
+  publish = "."
   command = "echo 'Static site — no build'"
 
 [[redirects]]
