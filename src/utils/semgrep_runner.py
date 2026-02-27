@@ -9,10 +9,18 @@ import subprocess
 import tempfile
 
 
-# Single config for speed; same C/C++ coverage. (Multiple configs were 3x slower, no extra findings on DiverseVul.)
-SEMGREP_CONFIG = "p/c"
-# Legacy list for verify script / backward compat
-SEMGREP_CONFIGS = [SEMGREP_CONFIG]
+# Configs targeting top CWEs in DiverseVul: memory-safety + CWE Top 25 + custom rules.
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", ".."))
+_CUSTOM_RULES = os.path.join(_PROJECT_ROOT, "config", "custom_rules.yaml")
+
+# p/c-memory-safety is not in the registry (404); use p/c + p/cwe-top-25 + custom rules.
+SEMGREP_CONFIGS = [
+    "p/c",
+    "p/cwe-top-25",
+    _CUSTOM_RULES,
+]
+SEMGREP_CONFIG = SEMGREP_CONFIGS[0]  # backward compat
 
 # Cap for normalizing violation count to [0,1]: V_PaC = min(1, count / K)
 NORMALIZE_K = 10.0
@@ -45,7 +53,11 @@ def run_semgrep_on_code(code: str, ext: str = ".c") -> tuple[int, float]:
         f.write(code)
         path = f.name
     try:
-        cmd = [_semgrep_exe(), "scan", "--json", "--quiet", "--no-git-ignore", "--config", SEMGREP_CONFIG, path]
+        cmd = [_semgrep_exe(), "scan", "--json", "--quiet", "--no-git-ignore"]
+        for cfg in SEMGREP_CONFIGS:
+            cmd.append("--config")
+            cmd.append(cfg)
+        cmd.append(path)
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -95,7 +107,11 @@ def run_semgrep_batch(codes: list, ext: str = ".c", timeout_per_batch: int = 120
             with open(fpath, "w", encoding="utf-8", errors="replace") as f:
                 f.write(code)
 
-        cmd = [_semgrep_exe(), "scan", "--json", "--quiet", "--no-git-ignore", "--config", SEMGREP_CONFIG, tmpdir]
+        cmd = [_semgrep_exe(), "scan", "--json", "--quiet", "--no-git-ignore"]
+        for cfg in SEMGREP_CONFIGS:
+            cmd.append("--config")
+            cmd.append(cfg)
+        cmd.append(tmpdir)
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_per_batch, cwd=tmpdir)
 
         counts = [0] * n

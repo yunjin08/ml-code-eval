@@ -58,3 +58,4 @@ logs/
 
 # Hugging Face cache (optional; remove if you want to cache in repo)
 .cache/
+data/hf_cache/

@@ -88,7 +88,7 @@ In the first cell (clone **or** upload, not both):
 
 **Option B – Upload zip**
 
-1. On your Mac: `zip -r phase3-code.zip src requirements.txt` (from repo root).
+1. On your Mac: `zip -r phase3-code.zip src config requirements.txt` (from repo root). Include **config/** so `config/custom_rules.yaml` and Semgrep configs are used (p/c + p/cwe-top-25 + custom rules).
 2. In Kaggle: **File** → **Upload** the zip.
 3. In a cell:
    ```python

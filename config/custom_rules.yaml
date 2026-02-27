@@ -1,0 +1,96 @@
+# Custom Semgrep rules targeting top CWEs in DiverseVul subset.
+# Use with: semgrep --config p/c --config p/cwe-top-25 --config config/custom_rules.yaml <path>
+# Expanded to catch more patterns (CWE-119/125/787, 416, 476, 190, 415).
+
+rules:
+  # CWE-119/787/125 — dangerous buffer functions
+  - id: cwe-119-dangerous-functions
+    pattern-either:
+      - pattern: strcpy($DST, $SRC)
+      - pattern: strcat($DST, $SRC)
+      - pattern: sprintf($BUF, $FMT, ...)
+      - pattern: gets($BUF)
+    message: "Dangerous function that may cause buffer overflow (CWE-119/787/125)"
+    languages: [c, cpp]
+    severity: ERROR
+
+  # CWE-119/787/125 — more buffer/memory patterns
+  - id: cwe-119-memcpy-unsafe
+    pattern-either:
+      - pattern: memcpy($DST, $SRC, $N)
+      - pattern: memmove($DST, $SRC, $N)
+    message: "Unbounded or unchecked copy may cause buffer overflow (CWE-119/787/125)"
+    languages: [c, cpp]
+    severity: WARNING
+
+  - id: cwe-119-strncpy-snprintf
+    pattern-either:
+      - pattern: strncpy($DST, $SRC, ...)
+      - pattern: snprintf($BUF, $SIZE, $FMT, ...)
+    message: "Potentially unsafe bounded copy/format (CWE-119/787/125)"
+    languages: [c, cpp]
+    severity: WARNING
+
+  # CWE-476 — NULL pointer dereference
+  - id: cwe-476-null-deref
+    pattern-either:
+      - pattern: |
+          $PTR = malloc(...);
+          *$PTR;
+      - pattern: |
+          $PTR = $FUNC(...);
+          $PTR->$FIELD;
+    message: "Potential NULL pointer dereference (CWE-476)"
+    languages: [c, cpp]
+    severity: ERROR
+
+  - id: cwe-476-realloc-deref
+    pattern: |
+      $PTR = realloc($PTR, ...);
+      ...
+      $PTR->$FIELD;
+    message: "realloc may return NULL; dereference without check (CWE-476)"
+    languages: [c, cpp]
+    severity: WARNING
+
+  # CWE-416 — Use After Free
+  - id: cwe-416-use-after-free
+    pattern-either:
+      - pattern: |
+          free($PTR);
+          ...
+          $PTR->$FIELD;
+      - pattern: |
+          free($PTR);
+          ...
+          *$PTR;
+    message: "Potential use after free (CWE-416)"
+    languages: [c, cpp]
+    severity: ERROR
+
+  # CWE-415 — Double Free
+  - id: cwe-415-double-free
+    pattern: |
+      free($PTR);
+      ...
+      free($PTR);
+    message: "Potential double free (CWE-415)"
+    languages: [c, cpp]
+    severity: ERROR
+
+  # CWE-190 — Integer overflow in memory allocation
+  - id: cwe-190-integer-overflow-alloc
+    pattern-either:
+      - pattern: malloc($A * $B)
+      - pattern: calloc($A, $B * $C)
+    message: "Potential integer overflow in allocation size (CWE-190)"
+    languages: [c, cpp]
+    severity: WARNING
+
+  - id: cwe-190-malloc-add-shift
+    pattern-either:
+      - pattern: malloc($A + $B)
+      - pattern: malloc($A << $N)
+    message: "Arithmetic in allocation size may overflow (CWE-190)"
+    languages: [c, cpp]
+    severity: WARNING
