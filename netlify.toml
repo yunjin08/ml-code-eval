@@ -1,0 +1,13 @@
+# Deploy the thesis showcase app to Netlify.
+# Connect this repo at netlify.com → New site from Git → pick this repo.
+# Netlify will serve the showcase folder as the site root.
+
+[build]
+  publish = "showcase"
+  command = "echo 'Static site — no build'"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = true

@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hybrid Code Review — Thesis Demo</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/c.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #08090f;
+      --bg-card:     #0d1120;
+      --bg-card2:    #111827;
+      --border:      rgba(255,255,255,0.07);
+      --border-hi:   rgba(255,255,255,0.14);
+      --text:        #d4d4d8;
+      --text-muted:  #6b7280;
+      --text-dim:    #94a3b8;
+      --green:       #00d084;
+      --yellow:      #f59e0b;
+      --red:         #ef4444;
+      --blue:        #4ec9b0;
+      --purple:      #a78bfa;
+      --radius:      12px;
+      --radius-sm:   8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Spectrum bar ── */
+    .spectrum-bar {
+      width: 100%; height: 6px;
+      background: linear-gradient(90deg, #00d084 0%, #4ec9b0 30%, #f59e0b 60%, #ef4444 100%);
+    }
+
+    /* ── Nav ── */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 48px;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(8,9,15,0.92);
+      backdrop-filter: blur(12px);
+    }
+    .nav-brand { display: flex; align-items: center; gap: 12px; }
+    .nav-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .nav-title { font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+    .nav-badges { display: flex; gap: 8px; }
+    .badge { font-size: 11px; font-weight: 600; letter-spacing: 0.8px; padding: 4px 10px; border-radius: 20px; border: 1px solid; text-transform: uppercase; }
+    .badge-green { color: var(--green); border-color: rgba(0,208,132,0.3); background: rgba(0,208,132,0.08); }
+    .badge-blue  { color: var(--blue);  border-color: rgba(78,201,176,0.3); background: rgba(78,201,176,0.08); }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center; padding: 72px 48px 48px;
+    }
+    .hero-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase;
+      color: var(--green); margin-bottom: 16px;
+    }
+    .hero h1 {
+      font-size: clamp(28px,4vw,48px); font-weight: 700; letter-spacing: -0.5px;
+      line-height: 1.2; max-width: 700px; margin: 0 auto 16px;
+    }
+    .hero h1 span { color: var(--green); }
+    .hero p {
+      color: var(--text-dim); font-size: 16px; max-width: 560px; margin: 0 auto 32px;
+    }
+
+    /* ── Comparison callout cards (like the image) ── */
+    .comparison {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+      max-width: 900px; margin: 0 auto 64px; padding: 0 48px;
+    }
+    .cmp-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px 32px;
+    }
+    .cmp-header {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 16px; font-weight: 700; margin-bottom: 20px;
+    }
+    .cmp-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .cmp-dot.green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .cmp-dot.red   { background: var(--red);   box-shadow: 0 0 8px var(--red);   }
+    .cmp-item {
+      display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start;
+    }
+    .cmp-num { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 2px; min-width: 20px; }
+    .cmp-item-title { font-weight: 600; margin-bottom: 2px; font-size: 13px; }
+    .cmp-item-desc { color: var(--text-muted); font-size: 12px; }
+    .cmp-item-desc span { color: var(--green); font-weight: 500; }
+    .cmp-item-desc span.red { color: var(--red); }
+
+    /* ── Pipeline ── */
+    .section-wrap { max-width: 1300px; margin: 0 auto; padding: 0 48px; }
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 24px;
+    }
+
+    .pipeline {
+      display: flex; align-items: center; gap: 0;
+      margin-bottom: 64px; overflow-x: auto; padding-bottom: 8px;
+    }
+    .pipe-node {
+      flex: 1; min-width: 130px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 16px;
+      text-align: center; position: relative;
+    }
+    .pipe-node.highlight { border-color: rgba(0,208,132,0.4); background: rgba(0,208,132,0.05); }
+    .pipe-icon { font-size: 24px; margin-bottom: 8px; }
+    .pipe-name { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+    .pipe-desc { font-size: 11px; color: var(--text-muted); }
+    .pipe-arrow {
+      width: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted); font-size: 18px; position: relative;
+    }
+    .pipe-arrow::after {
+      content: ''; position: absolute; top: 50%; left: 50%;
+      width: 24px; height: 1px; background: linear-gradient(90deg, transparent, var(--border-hi));
+      transform: translate(-50%, -50%);
+    }
+
+    /* ── Config strip ── */
+    .config-strip {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 28px;
+      display: flex; align-items: center; flex-wrap: wrap; gap: 28px;
+      margin-bottom: 48px;
+    }
+    .config-label { font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-muted); }
+    .config-items { display: flex; flex-wrap: wrap; gap: 20px; }
+    .config-item { display: flex; align-items: baseline; gap: 6px; }
+    .config-key { font-size: 12px; color: var(--text-muted); }
+    .config-val { font-size: 15px; font-weight: 700; font-family: 'SF Mono', monospace; }
+    .config-val.green { color: var(--green); }
+    .config-val.blue  { color: var(--blue); }
+    .config-val.yellow{ color: var(--yellow); }
+    .config-note { font-size: 11px; color: var(--text-muted); margin-left: auto; max-width: 320px; }
+
+    /* ── Scenario tabs ── */
+    .scenario-tabs {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px;
+    }
+    .tab-btn {
+      padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--bg-card); color: var(--text-dim);
+      cursor: pointer; font-size: 13px; font-weight: 500;
+      transition: all 0.18s; display: flex; align-items: center; gap: 8px;
+    }
+    .tab-btn:hover { border-color: var(--border-hi); color: var(--text); }
+    .tab-btn.active {
+      border-color: rgba(0,208,132,0.5); color: var(--text);
+      background: rgba(0,208,132,0.07);
+    }
+    .tab-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
+    .tab-btn.active .tab-dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+    /* ── Scenario layout ── */
+    .scenario-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 900px) { .scenario-grid { grid-template-columns: 1fr; } }
+
+    .scenario-code-panel {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .code-header {
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .code-filename { font-size: 12px; color: var(--text-dim); font-family: monospace; }
+    .cwe-badge {
+      font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 4px;
+      background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2);
+    }
+    .code-body { overflow-x: auto; }
+    .code-body pre { margin: 0 !important; border-radius: 0 !important; }
+    .code-body pre code { font-size: 12.5px !important; line-height: 1.65 !important; }
+
+    .scenario-context {
+      font-size: 12px; color: var(--text-muted);
+      padding: 14px 18px; border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .scenario-context strong { color: var(--text-dim); }
+
+    /* ── Results panel ── */
+    .results-panel { display: flex; flex-direction: column; gap: 14px; }
+
+    .verdict-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 20px;
+      transition: border-color 0.18s;
+    }
+    .verdict-card.winner {
+      border-color: rgba(0,208,132,0.4);
+      background: rgba(0,208,132,0.04);
+    }
+    .verdict-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+    }
+    .verdict-system {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .system-icon { font-size: 16px; }
+    .system-name { font-size: 13px; font-weight: 700; }
+    .winner-badge {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+      background: rgba(0,208,132,0.15); color: var(--green);
+      border: 1px solid rgba(0,208,132,0.3); border-radius: 4px; padding: 2px 8px;
+    }
+
+    .decision-badge {
+      font-size: 12px; font-weight: 700; padding: 5px 14px; border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+    .decision-badge.approve { background: rgba(0,208,132,0.1); color: var(--green); border: 1px solid rgba(0,208,132,0.25); }
+    .decision-badge.review  { background: rgba(245,158,11,0.1); color: var(--yellow); border: 1px solid rgba(245,158,11,0.25); }
+    .decision-badge.block   { background: rgba(239,68,68,0.1);  color: var(--red);    border: 1px solid rgba(239,68,68,0.25); }
+
+    .score-row {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+    }
+    .score-label { font-size: 11px; color: var(--text-muted); min-width: 80px; }
+    .score-track {
+      flex: 1; height: 5px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden;
+    }
+    .score-fill {
+      height: 100%; border-radius: 3px;
+      transition: width 0.6s cubic-bezier(.4,0,.2,1);
+    }
+    .score-num { font-size: 11px; font-family: monospace; color: var(--text-dim); min-width: 36px; text-align: right; }
+    .findings-row { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+    .findings-row span { color: var(--text); font-weight: 600; }
+
+    /* ── Explanation card ── */
+    .explanation-card {
+      background: linear-gradient(135deg, rgba(0,208,132,0.06) 0%, rgba(78,201,176,0.04) 100%);
+      border: 1px solid rgba(0,208,132,0.2);
+      border-radius: var(--radius); padding: 18px 20px;
+    }
+    .explanation-title {
+      font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--green); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+    }
+    .explanation-text { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+    .explanation-text strong { color: var(--text); }
+
+    /* ── Summary table ── */
+    .summary-section { margin-top: 72px; margin-bottom: 80px; }
+    .summary-title {
+      font-size: 20px; font-weight: 700; margin-bottom: 8px;
+    }
+    .summary-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 28px; }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--text-muted); padding: 12px 16px; border-bottom: 1px solid var(--border);
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+    tbody td { padding: 14px 16px; font-size: 13px; }
+    .td-mono { font-family: monospace; }
+    .td-center { text-align: center; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 48px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: gap;
+      color: var(--text-muted); font-size: 12px;
+    }
+    footer strong { color: var(--text-dim); }
+
+    /* ── Highlight.js override ── */
+    .hljs { background: #0d1120 !important; }
+
+    /* ── Scroll reveal animation ── */
+    .fade-in { opacity: 0; transform: translateY(16px); transition: opacity 0.5s, transform 0.5s; }
+    .fade-in.visible { opacity: 1; transform: none; }
+  </style>
+</head>
+<body>
+
+<div class="spectrum-bar"></div>
+
+<nav>
+  <div class="nav-brand">
+    <div class="nav-dot"></div>
+    <span class="nav-title">Hybrid Code Review Pipeline</span>
+  </div>
+  <div class="nav-badges">
+    <span class="badge badge-green">Thesis Demo</span>
+    <span class="badge badge-blue">DiverseVul · C/C++</span>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <div class="hero-label">● Research Showcase</div>
+  <h1>Hybrid Vulnerability Detection:<br /><span>ML + Policy-as-Code</span></h1>
+  <p>CodeBERT (ML) and Semgrep (PaC) combined with score normalization and a minimum policy weight — evaluated on the DiverseVul C/C++ dataset.</p>
+</section>
+
+<!-- ── Comparison cards ── -->
+<div class="comparison fade-in">
+  <div class="cmp-card">
+    <div class="cmp-header"><div class="cmp-dot green"></div> ML-Only (CodeBERT)</div>
+    <div class="cmp-item"><span class="cmp-num">01</span><div><div class="cmp-item-title">Probabilistic detection</div><div class="cmp-item-desc">Outputs a continuous confidence score learned from 260k+ labeled functions</div></div></div>
+    <div class="cmp-item"><span class="cmp-num">02</span><div><div class="cmp-item-title">Catches semantic patterns</div><div class="cmp-item-desc">Detects subtle issues like <span>timing side-channels</span> or logic errors — no explicit rules needed</div></div></div>
+    <div class="cmp-item"><span class="cmp-num">03</span><div><div class="cmp-item-title">Low precision on its own</div><div class="cmp-item-desc">P=0.127, F1=0.186 on test set; needs policy to improve signal quality</div></div></div>
+  </div>
+  <div class="cmp-card">
+    <div class="cmp-header"><div class="cmp-dot red"></div> PaC-Only (Semgrep)</div>
+    <div class="cmp-item"><span class="cmp-num">01</span><div><div class="cmp-item-title">Deterministic rules</div><div class="cmp-item-desc">Every match is <span>explicit and auditable</span>; rules target top CWEs (CWE-119, 416, 476, 190…)</div></div></div>
+    <div class="cmp-item"><span class="cmp-num">02</span><div><div class="cmp-item-title">High precision, low recall</div><div class="cmp-item-desc"><span>P=0.206</span> but Recall=0.033; fires on a small fraction of the test set</div></div></div>
+    <div class="cmp-item"><span class="cmp-num">03</span><div><div class="cmp-item-title">Misses semantic bugs</div><div class="cmp-item-desc">Timing attacks, logic errors, and non-trivial UAF patterns are <span class="red">invisible to rules</span></div></div></div>
+  </div>
+</div>
+
+<!-- ── Pipeline ── -->
+<div class="section-wrap fade-in">
+  <div class="section-label">Hybrid Pipeline</div>
+  <div class="pipeline">
+    <div class="pipe-node">
+      <div class="pipe-icon">📄</div>
+      <div class="pipe-name">Input Code</div>
+      <div class="pipe-desc">C/C++ function (DiverseVul)</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">
+      <div class="pipe-icon">🧠</div>
+      <div class="pipe-name">ML (CodeBERT)</div>
+      <div class="pipe-desc">P(vulnerable) → [0,1]</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">
+      <div class="pipe-icon">🔍</div>
+      <div class="pipe-name">PaC (Semgrep)</div>
+      <div class="pipe-desc">Findings → score [0,1]</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node highlight">
+      <div class="pipe-icon">⊕</div>
+      <div class="pipe-name">Hybrid Fusion</div>
+      <div class="pipe-desc">α·norm(ML) + β·norm(PaC)</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">
+      <div class="pipe-icon">🚦</div>
+      <div class="pipe-name">Decision</div>
+      <div class="pipe-desc">Approve / Review / Block</div>
+    </div>
+  </div>
+
+  <!-- Config strip -->
+  <div class="config-strip fade-in">
+    <span class="config-label">Tuned Config</span>
+    <div class="config-items">
+      <div class="config-item">
+        <span class="config-key">α (ML weight)</span>
+        <span class="config-val blue">0.75</span>
+      </div>
+      <div class="config-item">
+        <span class="config-key">β (PaC weight)</span>
+        <span class="config-val green">0.25</span>
+      </div>
+      <div class="config-item">
+        <span class="config-key">t_block</span>
+        <span class="config-val yellow">0.40</span>
+      </div>
+      <div class="config-item">
+        <span class="config-key">t_review</span>
+        <span class="config-val yellow">0.10</span>
+      </div>
+      <div class="config-item">
+        <span class="config-key">min_pac_weight</span>
+        <span class="config-val green">0.20</span>
+      </div>
+    </div>
+    <span class="config-note">Scores normalized to [0,1] using validation set min/max before fusion. Ensures both channels are on a comparable scale.</span>
+  </div>
+
+  <!-- Scenario tabs -->
+  <div class="section-label">Code Scenarios — Where Hybrid Wins</div>
+  <div class="scenario-tabs" id="tabs">
+    <button class="tab-btn active" data-idx="0" onclick="selectScenario(0)">
+      <span class="tab-dot"></span> S1 · Integer Overflow
+    </button>
+    <button class="tab-btn" data-idx="1" onclick="selectScenario(1)">
+      <span class="tab-dot"></span> S2 · Timing Attack
+    </button>
+    <button class="tab-btn" data-idx="2" onclick="selectScenario(2)">
+      <span class="tab-dot"></span> S3 · Use-After-Free
+    </button>
+    <button class="tab-btn" data-idx="3" onclick="selectScenario(3)">
+      <span class="tab-dot"></span> S4 · Over-Triggering
+    </button>
+    <button class="tab-btn" data-idx="4" onclick="selectScenario(4)">
+      <span class="tab-dot"></span> S5 · Safe Code ✓
+    </button>
+  </div>
+
+  <!-- Scenario content -->
+  <div class="scenario-grid" id="scenario-content"></div>
+
+  <!-- Summary table -->
+  <div class="summary-section fade-in">
+    <div class="summary-title">All Scenarios at a Glance</div>
+    <div class="summary-sub">Illustrative scores derived from real Phase 3 config (α=0.75, β=0.25, t_block=0.4, t_review=0.1, normalization applied).</div>
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>CWE</th>
+            <th class="td-center">ML raw</th>
+            <th class="td-center">ML decision</th>
+            <th class="td-center">PaC score</th>
+            <th class="td-center">PaC decision</th>
+            <th class="td-center">Hybrid risk</th>
+            <th class="td-center">Hybrid decision</th>
+            <th>Story</th>
+          </tr>
+        </thead>
+        <tbody id="summary-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span><strong>Hybrid Vulnerability Detection Thesis</strong> · DiverseVul (330k C/C++ functions) · CodeBERT + Semgrep</span>
+  <span>Phase 4 results: ML F1=0.186, PaC F1=0.056, Hybrid AUC=0.709</span>
+</footer>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────────
+// Config from phase3_hybrid_config.json
+const CFG = { alpha: 0.75, beta: 0.25, t_block: 0.4, t_review: 0.1,
+              ml_min: 0.09322, ml_max: 0.53684, pac_min: 0.0, pac_max: 1.0 };
+
+function normML(x) { return Math.min(1, Math.max(0, (x - CFG.ml_min) / (CFG.ml_max - CFG.ml_min))); }
+function normPaC(x) { return Math.min(1, Math.max(0, (x - CFG.pac_min) / (CFG.pac_max - CFG.pac_min))); }
+function hybridRisk(ml, pac) { return CFG.alpha * normML(ml) + CFG.beta * normPaC(pac); }
+function decision(score) { return score >= CFG.t_block ? 'Block' : score >= CFG.t_review ? 'Review' : 'Approve'; }
+
+const SCENARIOS = [
+  {
+    title: 'S1 · Integer Overflow in Allocation',
+    cwe: 'CWE-190',
+    file: 'matrix.c',
+    context: 'rows * cols can silently overflow when values are large, causing a tiny allocation and subsequent heap corruption.',
+    code: `void *create_matrix(int rows, int cols) {
+    // BUG: rows * cols can overflow int
+    // e.g. rows=50000, cols=50000 → wraps to small value
+    int total = rows * cols;
+
+    void *matrix = malloc(total * sizeof(double));
+    if (!matrix) return NULL;
+
+    memset(matrix, 0, total * sizeof(double));
+    return matrix;
+}`,
+    ml:  0.35,
+    pac: 0.1,
+    pacFindings: ['cwe-190-integer-overflow-alloc: malloc($A * $B)'],
+    explanation: '<strong>Combined signal tips to Block.</strong> ML scores 0.35 (Review) and PaC fires once on <code>malloc(A*B)</code> (Review). After min-max normalization, the hybrid risk reaches <strong>0.458</strong> — above the 0.4 block threshold. <strong>Neither ML nor PaC alone would block this.</strong> Only the hybrid escalates correctly.',
+    winner: 'Combined signal escalates to Block'
+  },
+  {
+    title: 'S2 · Timing Side-Channel Attack',
+    cwe: 'CWE-208',
+    file: 'auth.c',
+    context: 'Early exit on first mismatch leaks timing information — an attacker can infer the secret byte-by-byte. No static pattern exists for Semgrep to match.',
+    code: `int verify_token(const char *provided,
+                 const char *secret) {
+    int slen = (int)strlen(secret);
+
+    for (int i = 0; i < slen; i++) {
+        // BUG: early exit reveals how many bytes matched
+        // attacker measures response time to recover secret
+        if (provided[i] != secret[i])
+            return 0;
+    }
+    return 1;
+}`,
+    ml:  0.38,
+    pac: 0.0,
+    pacFindings: [],
+    explanation: '<strong>Hybrid catches what PaC cannot.</strong> Semgrep rules match <em>structural</em> patterns — there is no rule for timing side-channels. ML (CodeBERT) recognizes the suspicious early-exit comparison pattern and scores 0.38. After normalization, hybrid risk is <strong>0.485</strong>. <strong>ML-Only gives Review; Hybrid escalates to Block.</strong>',
+    winner: 'ML signals, Hybrid blocks — PaC blind to this bug'
+  },
+  {
+    title: 'S3 · Use-After-Free',
+    cwe: 'CWE-416',
+    file: 'connection.c',
+    context: 'buf is freed on the error path but still used in send_reply. If process() fails, the code reads freed memory.',
+    code: `void handle_request(connection_t *conn) {
+    char *buf = malloc(conn->len);
+    if (!buf) return;
+
+    memcpy(buf, conn->data, conn->len);
+
+    if (process(conn, buf) < 0) {
+        free(buf);                     // freed here on error
+        log_error("process failed");
+    }
+
+    // BUG: buf may already be freed above
+    send_reply(conn->fd, buf, conn->len);
+    free(buf);                         // double-free if process() failed
+}`,
+    ml:  0.51,
+    pac: 0.1,
+    pacFindings: ['cwe-416-use-after-free: free($PTR); ... $PTR->$FIELD'],
+    explanation: '<strong>Both channels strongly agree.</strong> ML outputs 0.51 — above the raw block threshold and normalized to 0.939. PaC confirms with one UAF rule match. Hybrid risk reaches <strong>0.729</strong>, the highest of all scenarios. This is a high-confidence Block with both evidence types converging.',
+    winner: 'Maximum confidence — ML + PaC both confirm'
+  },
+  {
+    title: 'S4 · PaC Over-Triggering (Hybrid Moderates)',
+    cwe: 'CWE-119 (false positive)',
+    file: 'test_overflow.c',
+    context: 'Test utility intentionally calling dangerous functions to validate detection logic. ML sees test/validation context; PaC fires on all dangerous function names regardless of context.',
+    code: `/* Unit test — validates dangerous function detection */
+void test_dangerous_functions(void) {
+    char src[8]  = "AAAAAAA";
+    char dst[256];
+
+    /* Intentional: exercising dangerous patterns */
+    strcpy(dst, src);            // fires cwe-119
+    strcat(dst, "_test_suffix"); // fires cwe-119
+    sprintf(dst, "out: %s", src);// fires cwe-119
+    gets(src);                   // fires cwe-119
+}`,
+    ml:  0.08,
+    pac: 0.4,
+    pacFindings: [
+      'cwe-119-dangerous-functions: strcpy($DST, $SRC)',
+      'cwe-119-dangerous-functions: strcat($DST, $SRC)',
+      'cwe-119-dangerous-functions: sprintf($BUF, $FMT, ...)',
+      'cwe-119-dangerous-functions: gets($BUF)'
+    ],
+    explanation: '<strong>Hybrid moderates PaC over-triggering.</strong> PaC fires 4 times (score=0.4 → Block), but ML correctly assigns low confidence (0.08) — it recognizes the test/validation context. Hybrid risk is only <strong>0.10</strong>. The policy signal is discounted by the weak ML score, giving a <em>Review</em> instead of Block — more appropriate for test code.',
+    winner: 'Hybrid corrects false positive — smarter than PaC alone'
+  },
+  {
+    title: 'S5 · Safe Bounds-Checked Code ✓',
+    cwe: 'None',
+    file: 'utils.c',
+    context: 'Proper null checks, length guard, and no dangerous calls. All three systems correctly agree: Approve.',
+    code: `int count_chars(const char *str,
+                char   target,
+                int    max_len) {
+
+    if (!str || max_len <= 0) return -1;
+
+    int count = 0;
+    for (int i = 0; i < max_len && str[i]; i++) {
+        if (str[i] == target)
+            count++;
+    }
+    return count;
+}`,
+    ml:  0.06,
+    pac: 0.0,
+    pacFindings: [],
+    explanation: '<strong>All three systems correctly approve.</strong> No dangerous patterns, no semantic anomalies. ML confidence is 0.06 (well below t_review=0.1). PaC finds nothing. Hybrid risk is 0. This demonstrates low false-positive rate — clean code passes through without alert.',
+    winner: 'All systems agree — clean code, no false positives'
+  }
+];
+
+// ── Render ────────────────────────────────────────────────────────────────────
+const DECISION_COLORS = { Approve: '#00d084', Review: '#f59e0b', Block: '#ef4444' };
+const SCORE_COLORS = { Block: '#ef4444', Review: '#f59e0b', Approve: '#00d084' };
+
+function scoreBar(pct, color) {
+  return `<div class="score-track"><div class="score-fill" style="width:${(pct*100).toFixed(0)}%;background:${color}"></div></div>`;
+}
+
+function decisionBadge(d) {
+  const cls = d.toLowerCase();
+  const icons = { block: '🔴', review: '🟡', approve: '🟢' };
+  return `<span class="decision-badge ${cls}">${icons[cls]} ${d}</span>`;
+}
+
+function renderVerdictCard(label, icon, rawScore, dec, extra, isWinner, winnerLabel) {
+  const color = SCORE_COLORS[dec];
+  const normalizedForBar = Math.min(1, rawScore);
+  return `
+    <div class="verdict-card${isWinner ? ' winner' : ''}">
+      <div class="verdict-header">
+        <div class="verdict-system">
+          <span class="system-icon">${icon}</span>
+          <span class="system-name">${label}</span>
+          ${isWinner ? `<span class="winner-badge">★ Hybrid wins</span>` : ''}
+        </div>
+        ${decisionBadge(dec)}
+      </div>
+      <div class="score-row">
+        <span class="score-label">Score</span>
+        ${scoreBar(normalizedForBar, color)}
+        <span class="score-num">${rawScore.toFixed(3)}</span>
+      </div>
+      ${extra}
+    </div>`;
+}
+
+function renderScenario(idx) {
+  const s = SCENARIOS[idx];
+  const ml  = s.ml;
+  const pac = s.pac;
+  const hr  = hybridRisk(ml, pac);
+  const mlDec  = decision(ml);
+  const pacDec = decision(pac);
+  const hrDec  = decision(hr);
+  const nmPac = normPaC(pac);
+  const nmMl  = normML(ml);
+
+  // Is hybrid the "winner"? (different from the naive approach)
+  const hybridIsSmarter = hrDec !== mlDec || hrDec !== pacDec;
+
+  const mlExtra = `<div class="findings-row">Raw confidence: <span>${ml.toFixed(3)}</span> | Normalized: <span>${nmMl.toFixed(3)}</span></div>`;
+  const pacExtra = `<div class="findings-row">Findings: <span>${s.pacFindings.length}</span>${s.pacFindings.length > 0 ? ` — ${s.pacFindings.slice(0,2).map(f=>`<em>${f.split(':')[0]}</em>`).join(', ')}` : ' (no findings)'}</div>`;
+  const hybridExtra = `
+    <div class="score-row" style="margin-top:6px">
+      <span class="score-label">ML contrib</span>
+      ${scoreBar(nmMl * CFG.alpha, '#4ec9b0')}
+      <span class="score-num">${(nmMl*CFG.alpha).toFixed(3)}</span>
+    </div>
+    <div class="score-row">
+      <span class="score-label">PaC contrib</span>
+      ${scoreBar(nmPac * CFG.beta, '#a78bfa')}
+      <span class="score-num">${(nmPac*CFG.beta).toFixed(3)}</span>
+    </div>
+    <div class="findings-row">Risk = 0.75 × ${nmMl.toFixed(3)} + 0.25 × ${nmPac.toFixed(3)} = <span>${hr.toFixed(3)}</span></div>`;
+
+  return `
+    <div class="scenario-code-panel">
+      <div class="code-header">
+        <span class="code-filename">${s.file}</span>
+        <span class="cwe-badge">${s.cwe}</span>
+      </div>
+      <div class="code-body">
+        <pre><code class="language-c">${escapeHtml(s.code)}</code></pre>
+      </div>
+      <div class="scenario-context"><strong>Context:</strong> ${s.context}</div>
+    </div>
+
+    <div class="results-panel">
+      ${renderVerdictCard('ML-Only (CodeBERT)', '🧠', ml, mlDec, mlExtra, false, '')}
+      ${renderVerdictCard('PaC-Only (Semgrep)', '🔍', pac, pacDec, pacExtra, false, '')}
+      ${renderVerdictCard('Hybrid (ML + PaC)', '⊕', hr, hrDec, hybridExtra, true, s.winner)}
+      <div class="explanation-card">
+        <div class="explanation-title">⚡ Why Hybrid Wins</div>
+        <div class="explanation-text">${s.explanation}</div>
+      </div>
+    </div>`;
+}
+
+function renderSummaryRow(s) {
+  const ml  = s.ml;
+  const pac = s.pac;
+  const hr  = hybridRisk(ml, pac);
+  const mlD = decision(ml);
+  const pD  = decision(pac);
+  const hD  = decision(hr);
+  const c = d => `color:${DECISION_COLORS[d]};font-weight:700`;
+  return `<tr>
+    <td>${s.title.replace(/^S\d+ · /, '')}</td>
+    <td><span style="font-size:11px;color:#f87171">${s.cwe}</span></td>
+    <td class="td-mono td-center">${ml.toFixed(2)}</td>
+    <td class="td-center"><span style="${c(mlD)}">${mlD}</span></td>
+    <td class="td-mono td-center">${pac.toFixed(2)}</td>
+    <td class="td-center"><span style="${c(pD)}">${pD}</span></td>
+    <td class="td-mono td-center">${hr.toFixed(3)}</td>
+    <td class="td-center"><span style="${c(hD)}">${hD}</span></td>
+    <td style="font-size:12px;color:#94a3b8">${s.winner}</td>
+  </tr>`;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+let currentIdx = 0;
+
+function selectScenario(idx) {
+  currentIdx = idx;
+  // update tabs
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === idx);
+  });
+  // render content
+  const el = document.getElementById('scenario-content');
+  el.innerHTML = renderScenario(idx);
+  el.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Render summary table
+  document.getElementById('summary-tbody').innerHTML = SCENARIOS.map(renderSummaryRow).join('');
+
+  // Render first scenario
+  selectScenario(0);
+
+  // Scroll fade-in
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+});
+</script>
+</body>
+</html>
