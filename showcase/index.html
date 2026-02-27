@@ -303,6 +303,93 @@
     /* ── Scroll reveal animation ── */
     .fade-in { opacity: 0; transform: translateY(16px); transition: opacity 0.5s, transform 0.5s; }
     .fade-in.visible { opacity: 1; transform: none; }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      html { -webkit-text-size-adjust: 100%; }
+      nav {
+        padding: 12px 16px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .nav-title { font-size: 14px; }
+      .nav-badges { gap: 6px; }
+      .badge { font-size: 10px; padding: 4px 8px; }
+      .hero { padding: 40px 16px 32px; }
+      .hero h1 { font-size: clamp(22px, 5vw, 32px); }
+      .hero p { font-size: 14px; }
+      .comparison {
+        grid-template-columns: 1fr;
+        padding: 0 16px;
+        margin-bottom: 40px;
+      }
+      .cmp-card { padding: 20px 18px; }
+      .section-wrap { padding: 0 16px; }
+      .pipeline { margin-bottom: 40px; }
+      .pipe-node { min-width: 100px; padding: 14px 10px; }
+      .pipe-icon { font-size: 20px; }
+      .pipe-name { font-size: 11px; }
+      .pipe-desc { font-size: 10px; }
+      .pipe-arrow { width: 20px; }
+      .config-strip {
+        padding: 16px 18px;
+        gap: 16px;
+      }
+      .config-items { gap: 12px; }
+      .config-note { max-width: none; margin-left: 0; margin-top: 4px; }
+      .summary-section { margin-top: 48px; margin-bottom: 48px; }
+      footer {
+        padding: 20px 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      #pipeline-steps { flex-wrap: wrap; gap: 6px; }
+      #pipeline-panel .pipeline-step { font-size: 11px; padding: 4px 8px; }
+      .live-api-row { flex-direction: column; align-items: stretch; }
+      .live-api-row #api-url { min-width: 0; }
+      .tab-btn, .tab-btn.active { min-height: 44px; }
+      button[id^="analyze"], #upload-btn { min-height: 44px; }
+    }
+
+    @media (max-width: 480px) {
+      nav { padding: 10px 12px; }
+      .nav-title { font-size: 13px; }
+      .hero { padding: 28px 12px 24px; }
+      .hero h1 { font-size: 20px; }
+      .comparison { padding: 0 12px; }
+      .cmp-card { padding: 16px 14px; }
+      .cmp-header { font-size: 14px; }
+      .section-wrap { padding: 0 12px; }
+      .pipe-node { min-width: 80px; padding: 12px 8px; }
+      .pipe-name { font-size: 10px; }
+      .tab-btn { padding: 10px 14px; font-size: 12px; }
+      .code-body pre code { font-size: 11px !important; }
+      table, thead, tbody, th, td, tr { display: block; }
+      thead tr { position: absolute; top: -9999px; left: -9999px; }
+      tbody tr { border-bottom: 1px solid var(--border); padding: 10px 0; }
+      tbody td {
+        padding: 4px 0 4px 50%;
+        text-align: right;
+        position: relative;
+        border: none;
+      }
+      tbody td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        width: 45%;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-align: left;
+      }
+    }
+
+    .live-result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+    @media (max-width: 768px) {
+      .live-result-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -433,7 +520,7 @@
   <div class="summary-section fade-in">
     <div class="summary-title">All Scenarios at a Glance</div>
     <div class="summary-sub">Illustrative scores derived from real Phase 3 config (α=0.75, β=0.25, t_block=0.4, t_review=0.1, normalization applied).</div>
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+    <div class="table-wrap" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:auto;">
       <table>
         <thead>
           <tr>
@@ -469,7 +556,7 @@
   </div>
 
   <!-- API URL config -->
-  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <div class="live-api-row" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
     <span style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted)">API URL</span>
     <input id="api-url" type="text" value="http://localhost:8000" placeholder="http://localhost:8000"
       style="flex:1;min-width:260px;background:#0a0c15;border:1px solid var(--border-hi);border-radius:6px;
@@ -794,15 +881,15 @@ function renderSummaryRow(s) {
   const hD  = decision(hr);
   const c = d => `color:${DECISION_COLORS[d]};font-weight:700`;
   return `<tr>
-    <td>${s.title.replace(/^S\d+ · /, '')}</td>
-    <td><span style="font-size:11px;color:#f87171">${s.cwe}</span></td>
-    <td class="td-mono td-center">${ml.toFixed(2)}</td>
-    <td class="td-center"><span style="${c(mlD)}">${mlD}</span></td>
-    <td class="td-mono td-center">${pac.toFixed(2)}</td>
-    <td class="td-center"><span style="${c(pD)}">${pD}</span></td>
-    <td class="td-mono td-center">${hr.toFixed(3)}</td>
-    <td class="td-center"><span style="${c(hD)}">${hD}</span></td>
-    <td style="font-size:12px;color:#94a3b8">${s.winner}</td>
+    <td data-label="Scenario">${s.title.replace(/^S\d+ · /, '')}</td>
+    <td data-label="CWE"><span style="font-size:11px;color:#f87171">${s.cwe}</span></td>
+    <td data-label="ML raw" class="td-mono td-center">${ml.toFixed(2)}</td>
+    <td data-label="ML decision" class="td-center"><span style="${c(mlD)}">${mlD}</span></td>
+    <td data-label="PaC score" class="td-mono td-center">${pac.toFixed(2)}</td>
+    <td data-label="PaC decision" class="td-center"><span style="${c(pD)}">${pD}</span></td>
+    <td data-label="Hybrid risk" class="td-mono td-center">${hr.toFixed(3)}</td>
+    <td data-label="Hybrid decision" class="td-center"><span style="${c(hD)}">${hD}</span></td>
+    <td data-label="Story" style="font-size:12px;color:#94a3b8">${s.winner}</td>
   </tr>`;
 }
 
@@ -1036,7 +1123,7 @@ function renderLiveResult(data) {
         <span style="font-size:13px;font-weight:700">Analysis Result — ${escapeHtml(data.filename)}</span>
         <span style="font-size:12px;color:var(--text-muted)">${data.findings_count} Semgrep finding${data.findings_count!==1?'s':''}</span>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+      <div class="live-result-grid" style="gap:0">
         <!-- Scores -->
         <div style="padding:20px;border-right:1px solid var(--border)">
           <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px">Scores</div>
