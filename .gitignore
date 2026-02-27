@@ -15,10 +15,11 @@ eggs/
 .installed.cfg
 *.egg
 
-# Data (large files; re-run phase1_dataset.py to regenerate)
-data/*.csv
+# Data and large CSVs (do not push; re-run pipeline or use Kaggle Dataset)
+*.csv
 data/*.parquet
 data.zip
+phase3_results/
 
 # Models and checkpoints (re-run phase2_train.py to regenerate)
 src/models/
