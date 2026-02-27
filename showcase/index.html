@@ -170,6 +170,13 @@
     .tab-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
     .tab-btn.active .tab-dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
 
+    .pipeline-step {
+      padding: 4px 10px; font-size: 12px; font-weight: 500; color: var(--text-muted);
+      border-radius: 6px; transition: color 0.2s, background 0.2s;
+    }
+    .pipeline-step.active { color: var(--green); background: rgba(0,208,132,0.12); }
+    .pipeline-step.done { color: var(--text-dim); }
+
     /* ── Scenario layout ── */
     .scenario-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
@@ -464,7 +471,7 @@
   <!-- API URL config -->
   <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
     <span style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted)">API URL</span>
-    <input id="api-url" type="text" placeholder="http://localhost:8000"
+    <input id="api-url" type="text" value="http://localhost:8000" placeholder="http://localhost:8000"
       style="flex:1;min-width:260px;background:#0a0c15;border:1px solid var(--border-hi);border-radius:6px;
              padding:8px 14px;color:var(--text);font-size:13px;font-family:monospace;outline:none" />
     <span style="font-size:12px;color:var(--text-muted)">Local API URL to enable live analysis (run the API from the repo with <code>USE_REAL_ML=1 uvicorn api.main:app --reload</code>)</span>
@@ -501,17 +508,18 @@
   <div id="upload-panel" style="display:none">
     <div id="drop-zone"
       onclick="document.getElementById('file-input').click()"
-      ondragover="event.preventDefault();this.style.borderColor='rgba(0,208,132,0.5)'"
+      ondragover="event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='copy';this.style.borderColor='rgba(0,208,132,0.5)'"
       ondragleave="this.style.borderColor=''"
       ondrop="handleDrop(event)"
       style="background:var(--bg-card);border:2px dashed var(--border-hi);border-radius:var(--radius);
              padding:48px;text-align:center;cursor:pointer;transition:border-color 0.2s">
       <div style="font-size:32px;margin-bottom:12px">📂</div>
       <div style="font-weight:600;margin-bottom:6px">Drop C/C++ files here, or click to browse</div>
-      <div style="font-size:12px;color:var(--text-muted)">.c · .cpp · .h · .hpp — up to 20 files, 512 KB each</div>
+      <div style="font-size:12px;color:var(--text-muted)">.c · .cpp · .h · .hpp — up to 20 files, 512 KB each. You can drop a folder.</div>
       <input id="file-input" type="file" multiple accept=".c,.cpp,.h,.hpp" style="display:none" onchange="handleFileSelect(event)" />
     </div>
     <div id="file-list" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px"></div>
+    <pre id="upload-log" style="margin-top:10px;padding:10px 14px;background:rgba(0,0,0,0.25);border-radius:6px;font-size:12px;font-family:monospace;color:var(--text-dim);min-height:24px;white-space:pre-wrap;word-break:break-all"></pre>
     <div style="margin-top:14px;display:flex;align-items:center;gap:12px">
       <button onclick="analyzeUpload()" id="upload-btn"
         style="padding:12px 28px;border-radius:8px;border:1px solid rgba(0,208,132,0.4);
@@ -523,6 +531,27 @@
     </div>
   </div>
 
+  <!-- Pipeline (shown while analyzing) -->
+  <div id="pipeline-panel" style="display:none;margin-top:24px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px">Pipeline</div>
+      <div id="pipeline-steps" style="display:flex;align-items:center;gap:0;flex-wrap:wrap;margin-bottom:14px">
+        <span class="pipeline-step" data-step="0">Send</span>
+        <span style="width:24px;height:1px;background:var(--border);flex-shrink:0"></span>
+        <span class="pipeline-step" data-step="1">PaC</span>
+        <span style="width:24px;height:1px;background:var(--border);flex-shrink:0"></span>
+        <span class="pipeline-step" data-step="2">ML</span>
+        <span style="width:24px;height:1px;background:var(--border);flex-shrink:0"></span>
+        <span class="pipeline-step" data-step="3">Hybrid</span>
+        <span style="width:24px;height:1px;background:var(--border);flex-shrink:0"></span>
+        <span class="pipeline-step" data-step="4">Done</span>
+      </div>
+      <div style="font-size:13px;color:var(--text);margin-bottom:10px" id="pipeline-status-text">Sending code...</div>
+      <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
+        <div id="pipeline-progress" style="height:100%;width:0%;background:linear-gradient(90deg,#00d084,#4ec9b0);border-radius:3px;transition:width 0.35s ease-out"></div>
+      </div>
+    </div>
+  </div>
   <!-- Result panel -->
   <div id="live-result" style="margin-top:24px"></div>
 </div>
@@ -806,6 +835,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Restore API URL from localStorage
   const saved = localStorage.getItem('thesis_api_url');
   if (saved) document.getElementById('api-url').value = saved;
+  else document.getElementById('api-url').value = 'http://localhost:8000';
   document.getElementById('api-url').addEventListener('input', e => {
     const v = e.target.value.trim();
     localStorage.setItem('thesis_api_url', v);
@@ -876,16 +906,88 @@ function loadSampleCode() {
 }
 
 function handleFileSelect(event) {
-  selectedFiles = Array.from(event.target.files);
+  const files = Array.from(event.target.files || []);
+  selectedFiles = files;
+  const names = files.map(f => f.name).join(', ') || '(none)';
+  setUploadLog('File pick: ' + files.length + ' file(s)\n' + names);
+  console.log('[Upload] File pick:', files.length, files.map(f => f.name));
   renderFileList();
 }
 
-function handleDrop(event) {
+function setUploadLog(msg) {
+  const el = document.getElementById('upload-log');
+  if (el) el.textContent = msg;
+  if (msg) console.log('[Upload log]', msg);
+}
+
+/** Recursively collect C/C++ files from a directory entry (drop folder support). */
+async function collectFilesFromEntry(entry, path, acc, maxFiles) {
+  if (acc.length >= maxFiles) return;
+  const name = entry.name || entry.fullPath || path;
+  if (entry.isFile) {
+    try {
+      const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
+      if (/\.(c|cpp|h|hpp)$/i.test(file.name)) acc.push(file);
+    } catch (_) {}
+  } else if (entry.isDirectory) {
+    const dir = entry.createReader();
+    let entries = [];
+    try {
+      entries = await new Promise((resolve, reject) => dir.readEntries(resolve, reject));
+    } catch (_) {
+      return;
+    }
+    for (const e of entries) {
+      await collectFilesFromEntry(e, path + '/' + e.name, acc, maxFiles);
+      if (acc.length >= maxFiles) break;
+    }
+  }
+}
+
+async function handleDrop(event) {
   event.preventDefault();
+  event.stopPropagation();
   event.currentTarget.style.borderColor = '';
-  selectedFiles = Array.from(event.dataTransfer.files).filter(f =>
-    /\.(c|cpp|h|hpp)$/i.test(f.name)
-  );
+  setUploadLog('Drop received...');
+  const maxFiles = 20;
+  const acc = [];
+  const items = event.dataTransfer.items;
+  const fileList = event.dataTransfer.files;
+  console.log('[Upload] Drop: items=', items && items.length, 'dataTransfer.files=', fileList && fileList.length);
+  if (items && items.length > 0) {
+    setUploadLog('Drop: ' + items.length + ' item(s). Reading...');
+    try {
+      for (let i = 0; i < items.length && acc.length < maxFiles; i++) {
+        const item = items[i];
+        if (item.kind !== 'file') continue;
+        const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+        if (entry && entry.isDirectory) {
+          setUploadLog('Walking folder: ' + (entry.name || '?'));
+          await collectFilesFromEntry(entry, entry.name || '', acc, maxFiles);
+        } else {
+          const file = item.getAsFile();
+          if (file && /\.(c|cpp|h|hpp)$/i.test(file.name)) {
+            acc.push(file);
+            console.log('[Upload] Added file:', file.name);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[Upload] Folder drop error:', e);
+      setUploadLog('Error: ' + (e.message || String(e)));
+    }
+  }
+  if (acc.length === 0 && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+    selectedFiles = Array.from(event.dataTransfer.files).filter(f =>
+      /\.(c|cpp|h|hpp)$/i.test(f.name)
+    ).slice(0, maxFiles);
+    setUploadLog('Fallback: ' + selectedFiles.length + ' file(s) from dataTransfer.files');
+    console.log('[Upload] Fallback files:', selectedFiles.length, selectedFiles.map(f => f.name));
+  } else {
+    selectedFiles = acc.slice(0, maxFiles);
+  }
+  setUploadLog('Loaded ' + selectedFiles.length + ' file(s): ' + selectedFiles.map(f => f.name).join(', '));
+  console.log('[Upload] Selected files:', selectedFiles.length, selectedFiles.map(f => f.name));
   renderFileList();
 }
 
@@ -897,6 +999,7 @@ function renderFileList() {
   ).join('');
   const btn = document.getElementById('upload-btn');
   btn.style.display = selectedFiles.length ? 'flex' : 'none';
+  console.log('[Upload] Rendered file list:', selectedFiles.length, 'files');
 }
 
 function renderLiveResult(data) {
@@ -979,6 +1082,38 @@ function renderLiveResult(data) {
     </div>`;
 }
 
+function showPipelinePanel() {
+  const panel = document.getElementById('pipeline-panel');
+  if (!panel) return;
+  panel.style.display = 'block';
+  document.querySelectorAll('.pipeline-step').forEach(el => {
+    el.classList.remove('active', 'done');
+  });
+  document.getElementById('pipeline-progress').style.width = '0%';
+  document.getElementById('pipeline-status-text').textContent = 'Sending code...';
+}
+
+function setPipelineStep(stepIndex, statusText) {
+  const steps = document.querySelectorAll('.pipeline-step');
+  steps.forEach((el, i) => {
+    el.classList.remove('active', 'done');
+    if (i < stepIndex) el.classList.add('done');
+    if (i === stepIndex) el.classList.add('active');
+  });
+  const statusEl = document.getElementById('pipeline-status-text');
+  if (statusEl && statusText) statusEl.textContent = statusText;
+}
+
+function setPipelineProgress(percent) {
+  const bar = document.getElementById('pipeline-progress');
+  if (bar) bar.style.width = Math.min(100, Math.max(0, percent)) + '%';
+}
+
+function hidePipelinePanel() {
+  const panel = document.getElementById('pipeline-panel');
+  if (panel) panel.style.display = 'none';
+}
+
 async function analyzeCode() {
   const apiUrl = getApiUrl();
   if (!apiUrl) return;
@@ -989,8 +1124,20 @@ async function analyzeCode() {
   const status = document.getElementById('analyze-status');
   btn.disabled = true;
   btn.textContent = '⏳ Analyzing…';
-  status.textContent = 'Running Semgrep…';
+  status.textContent = '';
   document.getElementById('live-result').innerHTML = '';
+
+  showPipelinePanel();
+  setPipelineStep(0, 'Sending code...');
+  setPipelineProgress(15);
+
+  const advancePipeline = () => {
+    setPipelineStep(1, 'Running PaC (Semgrep)...');
+    setPipelineProgress(35);
+    setTimeout(() => { setPipelineStep(2, 'Running ML...'); setPipelineProgress(55); }, 200);
+    setTimeout(() => { setPipelineStep(3, 'Computing hybrid...'); setPipelineProgress(75); }, 400);
+  };
+  advancePipeline();
 
   try {
     const res = await fetch(`${apiUrl}/analyze`, {
@@ -998,15 +1145,19 @@ async function analyzeCode() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, filename: 'snippet.c' }),
     });
+    setPipelineStep(4, 'Done');
+    setPipelineProgress(100);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(err.detail || res.statusText);
     }
     const data = await res.json();
-    renderLiveResult(data);
+    setTimeout(() => { hidePipelinePanel(); renderLiveResult(data); }, 400);
     status.textContent = '';
   } catch (e) {
-    status.textContent = `Error: ${e.message}`;
+    setPipelineStep(4, 'Error');
+    setPipelineProgress(100);
+    setTimeout(() => { hidePipelinePanel(); status.textContent = `Error: ${e.message}`; }, 400);
   } finally {
     btn.disabled = false;
     btn.textContent = '⚡ Analyze Code';
@@ -1022,22 +1173,38 @@ async function analyzeUpload() {
   const status = document.getElementById('upload-status');
   btn.disabled = true;
   btn.textContent = '⏳ Analyzing…';
-  status.textContent = 'Uploading and running Semgrep…';
+  status.textContent = '';
   document.getElementById('live-result').innerHTML = '';
+
+  showPipelinePanel();
+  setPipelineStep(0, 'Uploading files...');
+  setPipelineProgress(15);
+
+  const advancePipeline = () => {
+    setPipelineStep(1, 'Running PaC (Semgrep)...');
+    setPipelineProgress(35);
+    setTimeout(() => { setPipelineStep(2, 'Running ML...'); setPipelineProgress(55); }, 200);
+    setTimeout(() => { setPipelineStep(3, 'Computing hybrid...'); setPipelineProgress(75); }, 400);
+  };
+  advancePipeline();
 
   try {
     const form = new FormData();
     selectedFiles.forEach(f => form.append('files', f));
     const res = await fetch(`${apiUrl}/analyze/upload`, { method: 'POST', body: form });
+    setPipelineStep(4, 'Done');
+    setPipelineProgress(100);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(err.detail || res.statusText);
     }
     const data = await res.json();
-    renderLiveResult(data);
+    setTimeout(() => { hidePipelinePanel(); renderLiveResult(data); }, 400);
     status.textContent = '';
   } catch (e) {
-    status.textContent = `Error: ${e.message}`;
+    setPipelineStep(4, 'Error');
+    setPipelineProgress(100);
+    setTimeout(() => { hidePipelinePanel(); status.textContent = `Error: ${e.message}`; }, 400);
   } finally {
     btn.disabled = false;
     btn.textContent = '⚡ Analyze Files';
