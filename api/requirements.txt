@@ -2,3 +2,6 @@ fastapi>=0.110.0
 uvicorn[standard]>=0.29.0
 python-multipart>=0.0.9
 semgrep>=1.45.0
+# Optional for local USE_REAL_ML=1 (CodeBERT)
+torch>=2.0.0
+transformers>=4.30.0

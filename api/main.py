@@ -2,6 +2,8 @@
 Thesis Demo API — Live vulnerability analysis via Semgrep (PaC).
 POST /analyze   — accepts code text or file upload, returns findings + decision.
 GET  /health    — health check.
+
+Locally: set USE_REAL_ML=1 and have src/models/codebert/ to use real CodeBERT instead of heuristic.
 """
 import json
 import os
@@ -14,6 +16,66 @@ from typing import Optional
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+# ── Optional CodeBERT for local runs ───────────────────────────────────────
+REPO_ROOT = Path(__file__).resolve().parent.parent
+CODEBERT_PATH = REPO_ROOT / "src" / "models" / "codebert"
+USE_REAL_ML_ENV = os.environ.get("USE_REAL_ML", "").strip().lower() in ("1", "true", "yes")
+
+_ml_model = None
+_ml_tokenizer = None
+_ml_device = None
+
+
+def _load_codebert_if_available():
+    """Load CodeBERT once when USE_REAL_ML=1 and model dir exists."""
+    global _ml_model, _ml_tokenizer, _ml_device
+    if not USE_REAL_ML_ENV or not CODEBERT_PATH.is_dir():
+        return
+    if _ml_model is not None:
+        return
+    try:
+        import torch
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+        _ml_tokenizer = AutoTokenizer.from_pretrained(str(CODEBERT_PATH))
+        _ml_model = AutoModelForSequenceClassification.from_pretrained(str(CODEBERT_PATH))
+        _ml_model.eval()
+        _ml_device = "cuda" if torch.cuda.is_available() else "mps" if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available() else "cpu"
+        _ml_model.to(_ml_device)
+    except Exception as e:
+        import warnings
+        warnings.warn(f"CodeBERT load failed: {e}. Using heuristic ML.")
+
+
+def get_ml_score(code: str | list[str] | None, pac_score: float) -> tuple[float, bool]:
+    """
+    Return (ml_score, used_real_ml). If real CodeBERT is loaded and non-empty code is provided, run inference;
+    otherwise return heuristic from pac_score.
+    """
+    _load_codebert_if_available()
+    heuristic = (min(0.95, 0.12 + pac_score * 0.4), False)
+    if _ml_model is not None and code is not None:
+        texts = [code] if isinstance(code, str) else code
+        texts = [t for t in texts if t and isinstance(t, str) and t.strip()]
+        if texts:
+            import torch
+            max_len = 512
+            enc = _ml_tokenizer(
+                texts,
+                truncation=True,
+                max_length=max_len,
+                padding="max_length",
+                return_tensors="pt",
+            )
+            enc = {k: v.to(_ml_device) for k, v in enc.items()}
+            with torch.no_grad():
+                out = _ml_model(**enc)
+                probs = torch.softmax(out.logits, dim=-1)
+                p1 = probs[:, 1].cpu().numpy()
+            ml = float(max(p1)) if len(p1) > 1 else float(p1[0])
+            return (ml, True)
+    return heuristic
+
 
 app = FastAPI(
     title="Hybrid Code Review — Thesis Demo API",
@@ -41,7 +103,7 @@ HYBRID_CFG = {
 }
 NORMALIZE_K = 10.0
 
-# Semgrep configs relative to project root (mounted in Railway)
+# Semgrep configs relative to project root
 _HERE = Path(__file__).parent.parent          # repo root
 _CUSTOM_RULES = _HERE / "config" / "custom_rules.yaml"
 
@@ -99,8 +161,13 @@ def run_semgrep(path: str) -> tuple[list[dict], float]:
         raise HTTPException(status_code=500, detail="Semgrep not found. Ensure it is installed.")
 
 
-def build_response(findings: list[dict], pac_score: float, filename: str) -> dict:
-    """Build the analysis response including hybrid risk (no live ML — heuristic placeholder)."""
+def build_response(
+    findings: list[dict],
+    pac_score: float,
+    filename: str,
+    code_for_ml: Optional[str | list[str]] = None,
+) -> dict:
+    """Build the analysis response. Uses real CodeBERT when USE_REAL_ML=1 and code_for_ml provided."""
     pac_norm = _norm(pac_score, HYBRID_CFG["val_pac_min"], HYBRID_CFG["val_pac_max"])
     pac_dec = _decision(pac_score)
 
@@ -114,18 +181,26 @@ def build_response(findings: list[dict], pac_score: float, filename: str) -> dic
             "severity": f.get("extra", {}).get("severity", ""),
         })
 
-    # Heuristic ML estimate (in a real deployment, replace with a lightweight model call)
-    ml_heuristic = min(0.95, 0.12 + pac_score * 0.4)
-    ml_norm = _norm(ml_heuristic, HYBRID_CFG["val_ml_min"], HYBRID_CFG["val_ml_max"])
+    ml_score, used_real_ml = get_ml_score(code_for_ml if code_for_ml is not None else "", pac_score)
+    ml_norm = _norm(ml_score, HYBRID_CFG["val_ml_min"], HYBRID_CFG["val_ml_max"])
     hybrid_risk = HYBRID_CFG["alpha"] * ml_norm + HYBRID_CFG["beta"] * pac_norm
     hybrid_dec = _decision(hybrid_risk)
+
+    note = (
+        "ML score from live CodeBERT. PaC and findings from Semgrep."
+        if used_real_ml
+        else (
+            "ML score is a heuristic estimate (CodeBERT not loaded; set USE_REAL_ML=1 locally with src/models/codebert). "
+            "PaC score and findings are from live Semgrep analysis."
+        )
+    )
 
     return {
         "filename": filename,
         "pac_score": round(pac_score, 4),
         "pac_norm": round(pac_norm, 4),
         "pac_decision": pac_dec,
-        "ml_heuristic": round(ml_heuristic, 4),
+        "ml_heuristic": round(ml_score, 4),
         "ml_norm": round(ml_norm, 4),
         "hybrid_risk": round(hybrid_risk, 4),
         "hybrid_decision": hybrid_dec,
@@ -133,10 +208,8 @@ def build_response(findings: list[dict], pac_score: float, filename: str) -> dic
         "findings_by_rule": grouped,
         "semgrep_configs": SEMGREP_CONFIGS,
         "hybrid_config": HYBRID_CFG,
-        "note": (
-            "ML score is a heuristic estimate (CodeBERT inference requires GPU). "
-            "PaC score and findings are from live Semgrep analysis."
-        ),
+        "note": note,
+        "ml_from_codebert": used_real_ml,
     }
 
 
@@ -159,7 +232,7 @@ async def analyze_code(req: CodeRequest):
         tmppath = f.name
     try:
         findings, pac_score = run_semgrep(tmppath)
-        return build_response(findings, pac_score, req.filename)
+        return build_response(findings, pac_score, req.filename, code_for_ml=req.code)
     finally:
         try:
             os.unlink(tmppath)
@@ -177,6 +250,7 @@ async def analyze_upload(
 
     tmpdir = tempfile.mkdtemp(prefix="thesis_upload_")
     saved = []
+    code_contents: list[str] = []
     try:
         for uf in files:
             fname = Path(uf.filename).name
@@ -188,12 +262,19 @@ async def analyze_upload(
                 raise HTTPException(status_code=400, detail=f"{fname} exceeds 512 KB limit.")
             dest.write_bytes(content)
             saved.append(fname)
+            try:
+                code_contents.append(content.decode("utf-8", errors="replace"))
+            except Exception:
+                code_contents.append("")
 
         if not saved:
             raise HTTPException(status_code=400, detail="No valid C/C++ files (.c .cpp .h .hpp) found.")
 
         findings, pac_score = run_semgrep(tmpdir)
-        result = build_response(findings, pac_score, f"{len(saved)} file(s): {', '.join(saved[:5])}")
+        result = build_response(
+            findings, pac_score, f"{len(saved)} file(s): {', '.join(saved[:5])}",
+            code_for_ml=code_contents if code_contents else None,
+        )
         result["files_analyzed"] = saved
         return result
     finally:
@@ -202,6 +283,7 @@ async def analyze_upload(
 
 @app.get("/health")
 async def health():
+    _load_codebert_if_available()
     semgrep_ok = bool(shutil.which("semgrep"))
     custom_rules_ok = _CUSTOM_RULES.exists()
     return {
@@ -209,6 +291,9 @@ async def health():
         "semgrep_available": semgrep_ok,
         "custom_rules_available": custom_rules_ok,
         "configs": SEMGREP_CONFIGS,
+        "ml_from_codebert": _ml_model is not None,
+        "use_real_ml_env": USE_REAL_ML_ENV,
+        "codebert_path_exists": CODEBERT_PATH.is_dir(),
     }
 
 

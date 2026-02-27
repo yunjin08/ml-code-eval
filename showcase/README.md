@@ -18,7 +18,7 @@ Single-page static app (HTML + CSS + JS). No build step. Deploy with Netlify.
 ## Dependencies
 
 - **highlight.js** is loaded from cdnjs (CSS + JS). No install; works in production as long as the CDN is reachable.
-- No API or backend; everything runs in the browser.
+- No API or backend for the static page itself. The **Live Analysis** tab only works when the thesis API is run **locally** (e.g. `USE_REAL_ML=1 uvicorn api.main:app --reload` from the repo root) or on a GPU-backed server; see the repo root for running the API.
 
 ## Custom domain
 

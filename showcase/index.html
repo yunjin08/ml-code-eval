@@ -464,10 +464,13 @@
   <!-- API URL config -->
   <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
     <span style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted)">API URL</span>
-    <input id="api-url" type="text" placeholder="https://your-api.railway.app"
+    <input id="api-url" type="text" placeholder="http://localhost:8000"
       style="flex:1;min-width:260px;background:#0a0c15;border:1px solid var(--border-hi);border-radius:6px;
              padding:8px 14px;color:var(--text);font-size:13px;font-family:monospace;outline:none" />
-    <span style="font-size:12px;color:var(--text-muted)">Enter your Railway API URL to enable live analysis</span>
+    <span style="font-size:12px;color:var(--text-muted)">Local API URL to enable live analysis (run the API from the repo with <code>USE_REAL_ML=1 uvicorn api.main:app --reload</code>)</span>
+  </div>
+  <div id="live-analysis-note" style="display:none;background:rgba(255,180,0,0.08);border:1px solid rgba(255,180,0,0.35);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--text)">
+    <strong>Note:</strong> Live analysis with real ML only works when using a <strong>local URL</strong> (e.g. <code>http://localhost:8000</code>) or a GPU-backed deployment. Other URLs will use heuristic ML only.
   </div>
 
   <!-- Paste mode -->
@@ -804,8 +807,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('thesis_api_url');
   if (saved) document.getElementById('api-url').value = saved;
   document.getElementById('api-url').addEventListener('input', e => {
-    localStorage.setItem('thesis_api_url', e.target.value.trim());
+    const v = e.target.value.trim();
+    localStorage.setItem('thesis_api_url', v);
+    updateLiveAnalysisNote(v);
   });
+  updateLiveAnalysisNote(document.getElementById('api-url').value.trim());
 
   // Scroll fade-in
   const observer = new IntersectionObserver(entries => {
@@ -817,10 +823,25 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── Live Analysis ──────────────────────────────────────────────────────────────
 let selectedFiles = [];
 
+function isLocalUrl(url) {
+  if (!url) return false;
+  try {
+    const u = new URL(url.startsWith('http') ? url : 'http://' + url);
+    const host = (u.hostname || '').toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+  } catch (_) { return false; }
+}
+
+function updateLiveAnalysisNote(apiUrl) {
+  const el = document.getElementById('live-analysis-note');
+  if (!el) return;
+  el.style.display = apiUrl && !isLocalUrl(apiUrl) ? 'block' : 'none';
+}
+
 function getApiUrl() {
   const url = (document.getElementById('api-url').value || '').trim().replace(/\/$/, '');
   if (!url) {
-    alert('Enter your Railway API URL at the top of the Live Analysis section (e.g. https://your-api.railway.app).');
+    alert('Enter your API URL at the top of the Live Analysis section (e.g. http://localhost:8000). Live analysis with real ML only works on local or GPU-backed deployment.');
     return null;
   }
   return url;
