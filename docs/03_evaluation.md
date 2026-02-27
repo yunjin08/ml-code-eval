@@ -15,9 +15,10 @@ This document describes the governance experiment (Phase 3) and the statistical 
 1. **ML-Only:** For each test sample, run the selected model → `ml_confidence` in [0, 1].  
 2. **PaC-Only:** For each test sample, write code to a temp file, run Semgrep (config `p/c`), count findings → normalized **PaC score** in [0, 1] (e.g. min(1, count/10)).  
 3. **Hybrid:**  
-   - **Risk formula:** `hybrid_risk = α * ml_confidence + β * pac_score` with α + β = 1.  
-   - **Tuning:** Grid search over (α, β) and thresholds on the **validation** set to maximize F1 for the **Block** decision.  
-   - **Test:** Apply the chosen α, β and thresholds to the test set.  
+   - **Score normalization:** ML and PaC scores are min-max normalized to [0,1] using the **validation** set so both channels are on a comparable scale (otherwise PaC, often in [0, 0.1], is dominated by ML). This follows standard practice in classifier fusion (e.g. Kittler et al.; adaptive score normalization).  
+   - **Risk formula:** `hybrid_risk = α * norm(ml_confidence) + β * norm(pac_score)` with α + β = 1.  
+   - **Tuning:** Grid search over (α, β) and thresholds on the **validation** set to maximize F1 for the **Block** decision. Optional **`--min_pac_weight`** (e.g. 0.2) ensures β ≥ that value so the hybrid is never ML-only; justified in governance/safety where policy must contribute.  
+   - **Test:** Apply the chosen α, β and the same validation min/max to test scores, then form hybrid_risk and decisions.  
 4. **Decisions:** For each approach, map scores to three outcomes: **Approve** (0), **Review** (1), **Block** (2) using the tuned thresholds (e.g. Block if score ≥ θ_block, Review if score ≥ θ_review).
 
 ### 3.1.3 Outputs
@@ -25,12 +26,18 @@ This document describes the governance experiment (Phase 3) and the statistical 
 | Artifact | Path | Description |
 |----------|------|-------------|
 | Experiment results | `results/phase3_experiment_results.csv` | Per test sample: `id`, `code`, `label`, `split`, `ml_confidence`, `pac_score`, `hybrid_risk`, `decision_ml`, `decision_pac`, `decision_hybrid`. |
-| Hybrid config | `results/phase3_hybrid_config.json` | Chosen `alpha`, `beta`, `t_block`, `t_review`. |
+| Hybrid config | `results/phase3_hybrid_config.json` | Chosen `alpha`, `beta`, `t_block`, `t_review`, and validation min/max for score normalization (`val_ml_min`, `val_ml_max`, `val_pac_min`, `val_pac_max`). |
 
 **Command (full test set):**
 
 ```bash
 python src/phase3_experiment.py
+```
+
+**To ensure PaC always contributes (research / governance):**
+
+```bash
+python src/phase3_experiment.py --min_pac_weight 0.2
 ```
 
 **Optional (faster, not for final thesis):** `--max_test N`, `--max_val N`.

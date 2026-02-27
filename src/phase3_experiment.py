@@ -188,15 +188,38 @@ def decisions_from_thresholds(score: np.ndarray, t_block: float, t_review: float
     return out
 
 
-def tune_hybrid_on_val(ml_scores, pac_scores, labels):
-    """Grid search alpha in [0, 0.25, 0.5, 0.75, 1.0], beta = 1-alpha; thresholds to maximize F1(Block)."""
+def _normalize_scores(scores: np.ndarray, s_min: float, s_max: float, eps: float = 1e-9) -> np.ndarray:
+    """Min-max normalize to [0,1] using given min/max (e.g. from validation set). Standard in score fusion (Kittler et al.; adaptive score normalization)."""
+    span = s_max - s_min + eps
+    return np.clip((scores - s_min) / span, 0.0, 1.0)
+
+
+def tune_hybrid_on_val(
+    ml_scores: np.ndarray,
+    pac_scores: np.ndarray,
+    labels: np.ndarray,
+    min_pac_weight: float = 0.0,
+):
+    """
+    Grid search alpha, beta = 1-alpha, and thresholds to maximize F1(Block) on validation.
+    Scores should be on comparable scale (e.g. both [0,1]); if not, normalize before calling.
+
+    min_pac_weight: If > 0, only consider alpha such that beta >= min_pac_weight (ensures
+    PaC contributes; justified in governance/safety where policy must have a say).
+    """
     from sklearn.metrics import f1_score
+
+    alphas = [0.0, 0.25, 0.5, 0.75, 1.0]
+    if min_pac_weight > 0:
+        alphas = [a for a in alphas if (1.0 - a) >= min_pac_weight]
+        if not alphas:
+            alphas = [0.5]
 
     best_f1 = -1
     best_alpha = 0.5
     best_t_block = 0.5
     best_t_review = 0.25
-    for alpha in [0.0, 0.25, 0.5, 0.75, 1.0]:
+    for alpha in alphas:
         beta = 1.0 - alpha
         hybrid = alpha * ml_scores + beta * pac_scores
         for t_block in [0.3, 0.4, 0.5, 0.6, 0.7]:
@@ -222,6 +245,7 @@ def main():
     parser.add_argument("--no_verify_pac", action="store_true", help="Skip PaC setup verification (not recommended; use only if you already verified).")
     parser.add_argument("--pac_batch_size", type=int, default=100, help="Run Semgrep on N files per process (default 100). Set 0 for per-file mode (slower).")
     parser.add_argument("--backup_to_kaggle_dataset", type=str, default=None, help="Push results to Kaggle Dataset when done (e.g. USERNAME/code-reviewer-thesis-phase3-results). Saves phase3 CSV + config so you can find them after session reset.")
+    parser.add_argument("--min_pac_weight", type=float, default=0.0, help="Minimum weight for PaC (beta). If > 0, tuning never picks ML-only (alpha=1). E.g. 0.2 ensures policy contributes; justified in governance/safety. Default 0.")
     args = parser.parse_args()
 
     # Verify PaC (Semgrep) works before trusting any PaC results
@@ -308,10 +332,24 @@ def main():
     else:
         val_ml = get_ml_confidence_rf(val_sub)
     val_pac = get_pac_scores(val_sub, workers=args.workers, pac_batch_size=args.pac_batch_size)
-    alpha, beta, t_block, t_review = tune_hybrid_on_val(val_ml, val_pac, val_sub["label"].values)
+    # Normalize ML and PaC to [0,1] using validation min/max so both channels are on comparable scale
+    # (otherwise PaC scores are often in [0, 0.1] and get dominated by ML). Standard in score fusion.
+    val_ml_min, val_ml_max = float(np.min(val_ml)), float(np.max(val_ml))
+    val_pac_min, val_pac_max = float(np.min(val_pac)), float(np.max(val_pac))
+    val_ml_n = _normalize_scores(val_ml, val_ml_min, val_ml_max)
+    val_pac_n = _normalize_scores(val_pac, val_pac_min, val_pac_max)
+    alpha, beta, t_block, t_review = tune_hybrid_on_val(
+        val_ml_n, val_pac_n, val_sub["label"].values, min_pac_weight=args.min_pac_weight
+    )
 
-    # Hybrid risk and decisions on test
-    test_df["hybrid_risk"] = alpha * test_df["ml_confidence"] + beta * test_df["pac_score"]
+    # Apply same normalization to test scores, then form hybrid risk
+    test_ml_n = _normalize_scores(
+        test_df["ml_confidence"].values, val_ml_min, val_ml_max
+    )
+    test_pac_n = _normalize_scores(
+        test_df["pac_score"].values, val_pac_min, val_pac_max
+    )
+    test_df["hybrid_risk"] = alpha * test_ml_n + beta * test_pac_n
     test_df["decision_ml"] = decisions_from_thresholds(test_df["ml_confidence"].values, t_block, t_review)
     test_df["decision_pac"] = decisions_from_thresholds(test_df["pac_score"].values, t_block, t_review)
     test_df["decision_hybrid"] = decisions_from_thresholds(test_df["hybrid_risk"].values, t_block, t_review)
@@ -320,8 +358,18 @@ def main():
     out_path = os.path.join(RESULTS_DIR, "phase3_experiment_results.csv")
     test_df.to_csv(out_path, index=False)
     config_path = os.path.join(RESULTS_DIR, "phase3_hybrid_config.json")
+    config = {
+        "alpha": alpha,
+        "beta": beta,
+        "t_block": t_block,
+        "t_review": t_review,
+        "val_ml_min": val_ml_min,
+        "val_ml_max": val_ml_max,
+        "val_pac_min": val_pac_min,
+        "val_pac_max": val_pac_max,
+    }
     with open(config_path, "w") as f:
-        json.dump({"alpha": alpha, "beta": beta, "t_block": t_block, "t_review": t_review}, f, indent=2)
+        json.dump(config, f, indent=2)
     print(f"Results saved to {out_path}")
     print(f"Hybrid config: alpha={alpha}, beta={beta}, t_block={t_block}, t_review={t_review}")
 
