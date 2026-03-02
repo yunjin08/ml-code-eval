@@ -179,6 +179,13 @@ Hybrid has a slight AUC gain over ML-only; PaC-only has much lower discriminativ
   - For **ranking** or **alternative thresholds**: the hybrid risk score has marginally better discrimination (AUC +0.004). In practice this means the hybrid score could be slightly more useful if you later change thresholds or use the score for prioritization rather than a single Block/Approve cut.
 - **Summary:** We do not claim “hybrid is better than ML” on the primary decision metrics; we do report the **slight AUC gain** as a positive signal that adding PaC did not hurt and may add a small amount of information when using the score as a continuous signal.
 
+### 4.7 Main finding and recommendation
+
+- **Main finding:** ML and Hybrid are **strongly connected** on this dataset: because PaC has low recall, the hybrid risk is dominated by the ML term (α = 0.75), so Hybrid ≈ ML. The **lever that would make Hybrid more powerful** is a **more powerful PaC** — better rules, broader coverage, or data where static rules fire on a larger fraction of vulnerable samples.
+- **Recommendation / future work:** Investigate setups where PaC has **comparable signal to ML** — e.g. stronger or more targeted Semgrep rules, or a dataset where rules match more often — so that tuning yields something closer to **50–50 (or more) PaC weight** instead of 25% PaC. Under those conditions we would expect:
+  - **Higher AUC** for Hybrid (and possibly better F1) if PaC adds discriminative signal.
+  - A real chance to **accept the alternative hypotheses** we currently reject: **H1** (Hybrid F1 > ML) and **H3** (Hybrid precision > ML) could be supported when PaC is strong enough to improve over ML-only. So the recommendation is to **strengthen PaC** (or choose contexts where PaC is strong) and re-run the experiment to see if Hybrid then shows a clear gain and the hypotheses are accepted.
+
 ---
 
 ## 5. Artifacts and references
