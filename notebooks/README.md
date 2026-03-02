@@ -1,23 +1,32 @@
 # Notebooks
 
-- **`findings.ipynb`** — Full pipeline findings (Phase 1–4): **Phase 1** dataset splits (`data/splits.json`), **Phase 2** validation report and model choice (`phase2_validation_report.json`), **Phase 3** hybrid config, **Phase 4** primary metrics, ROC AUC, McNemar, hypotheses, and optional experiment snapshot. Looks for files in `results/` or `phase3_results/` and `data/splits.json`.
+- **`findings.ipynb`** — Full pipeline findings (Phase 1–4): Phase 1 splits, Phase 2 validation & model choice, Phase 3 hybrid config (α, β, thresholds), Phase 4 primary metrics, ROC AUC, McNemar, and hypotheses (H1–H3). Reads from `results/` or `phase3_results/` and `data/splits.json`.
 
 ## How to run
 
-**Option A — From terminal (repo root)**
+**Prerequisites:** Phase 1–4 must have been run (or results copied into the repo). Required files:
+- `data/splits.json`
+- `results/phase2_validation_report.json`
+- `results/phase3_hybrid_config.json`
+- `results/phase4_evaluation_report.json`
+- (optional) `results/phase3_experiment_results.csv` for the snapshot table
+
+**Option A — Terminal (from repo root)**
 
 ```bash
 cd /path/to/code-reviewer-thesis
-pip install jupyter pandas matplotlib   # if needed
+source .venv/bin/activate   # or: .venv\Scripts\activate on Windows
+pip install jupyter pandas matplotlib   # if not already installed
 jupyter notebook notebooks/findings.ipynb
 ```
 
-Or with JupyterLab: `jupyter lab notebooks/findings.ipynb`
+Or JupyterLab: `jupyter lab notebooks/findings.ipynb`
 
-**Option B — From Cursor / VS Code**
+**Option B — Cursor / VS Code**
 
-1. Open `notebooks/findings.ipynb`.
-2. Pick the kernel: click “Select Kernel” (top right) → choose your `.venv` or the Python that has `pandas` and `matplotlib`.
-3. Run all: “Run All” in the notebook toolbar, or run cells one by one (Shift+Enter).
+1. Open the repo folder `code-reviewer-thesis` (so paths resolve correctly).
+2. Open `notebooks/findings.ipynb`.
+3. **Select kernel:** Click “Select Kernel” (top right) → choose the repo’s `.venv` (or any Python with `pandas`, `matplotlib`).
+4. **Run:** “Run All” in the toolbar, or run cells with Shift+Enter.
 
-**Tip:** Run from the **repo root** (e.g. open the folder `code-reviewer-thesis` in Cursor). The notebook detects `notebooks/` vs root and sets paths so `results/` and `phase3_results/` are found.
+**Note:** The notebook infers the project root from the current working directory. If you open the file from inside the `notebooks/` folder, it still finds `results/` and `data/` relative to the repo root.
