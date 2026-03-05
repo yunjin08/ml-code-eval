@@ -138,6 +138,25 @@ def get_ml_confidence_rf(test_df):
     return probs
 
 
+def get_ml_confidence_knn(test_df):
+    import joblib
+    from utils.lizard_metrics import extract_metrics
+
+    knn_path = os.path.join(MODELS_DIR, "knn.pkl")
+    if not os.path.isfile(knn_path):
+        raise FileNotFoundError(f"KNN model not found at {knn_path}")
+    data = joblib.load(knn_path)
+    knn, scaler = data["knn"], data["scaler"]
+    rows = []
+    for _, row in test_df.iterrows():
+        m = extract_metrics(row["code"], "c")
+        rows.append([m["cyclomatic_complexity"], m["nloc"], m["token_count"], m["parameter_count"]])
+    X = np.array(rows)
+    X_s = scaler.transform(X)
+    probs = knn.predict_proba(X_s)[:, 1]  # P(vulnerable)
+    return probs
+
+
 def _pac_one(args):
     """Worker for parallel PaC: (code, ext) -> score. Must be top-level for multiprocessing."""
     code, ext = args
@@ -274,6 +293,8 @@ def main():
     # ML scores on test
     if selected == "codebert":
         ml_confidence = get_ml_confidence_codebert(test_df)
+    elif selected == "knn":
+        ml_confidence = get_ml_confidence_knn(test_df)
     else:
         ml_confidence = get_ml_confidence_rf(test_df)
     test_df = test_df.copy()
@@ -329,6 +350,8 @@ def main():
     val_sub = val_df.sample(n=min(args.max_val, len(val_df)), random_state=42) if args.max_val else val_df
     if selected == "codebert":
         val_ml = get_ml_confidence_codebert(val_sub)
+    elif selected == "knn":
+        val_ml = get_ml_confidence_knn(val_sub)
     else:
         val_ml = get_ml_confidence_rf(val_sub)
     val_pac = get_pac_scores(val_sub, workers=args.workers, pac_batch_size=args.pac_batch_size)

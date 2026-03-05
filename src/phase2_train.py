@@ -324,14 +324,69 @@ def train_random_forest(train_df, val_df, max_train=None, max_val=None):
     return rf, f1, {"eval_f1": f1, "eval_precision": prec, "eval_recall": rec}
 
 
+def _lizard_features_for_df(train_df, val_df):
+    """Shared feature extraction for RF and KNN. Returns (X_train, y_train, X_val, y_val)."""
+    sys.path.insert(0, SCRIPT_DIR)
+    from utils.lizard_metrics import extract_metrics
+
+    def features_for_df(df):
+        rows = []
+        for _, row in df.iterrows():
+            m = extract_metrics(row["code"], language="c")
+            rows.append(
+                [
+                    m["cyclomatic_complexity"],
+                    m["nloc"],
+                    m["token_count"],
+                    m["parameter_count"],
+                ]
+            )
+        return np.array(rows)
+
+    X_train = features_for_df(train_df)
+    y_train = train_df["label"].values
+    X_val = features_for_df(val_df)
+    y_val = val_df["label"].values
+    return X_train, y_train, X_val, y_val
+
+
+def train_knn(train_df, val_df, max_train=None, max_val=None, n_neighbors=10):
+    """Train K-Nearest Neighbors on lizard features; return model, validation F1, metrics."""
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.metrics import f1_score, precision_score, recall_score
+    import joblib
+
+    if max_train:
+        train_df = train_df.sample(n=max_train, random_state=42)
+    if max_val:
+        val_df = val_df.sample(n=max_val, random_state=42)
+
+    X_train, y_train, X_val, y_val = _lizard_features_for_df(train_df, val_df)
+    scaler = StandardScaler()
+    X_train_s = scaler.fit_transform(X_train)
+    X_val_s = scaler.transform(X_val)
+
+    knn = KNeighborsClassifier(n_neighbors=n_neighbors, weights="distance", metric="euclidean", n_jobs=-1)
+    knn.fit(X_train_s, y_train)
+    preds = knn.predict(X_val_s)
+    f1 = f1_score(y_val, preds, zero_division=0)
+    prec = precision_score(y_val, preds, zero_division=0)
+    rec = recall_score(y_val, preds, zero_division=0)
+
+    joblib.dump({"knn": knn, "scaler": scaler}, os.path.join(MODELS_DIR, "knn.pkl"))
+    return knn, f1, {"eval_f1": f1, "eval_precision": prec, "eval_recall": rec}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--max_train", type=int, default=None, help="Cap train size for quick runs")
     parser.add_argument("--max_val", type=int, default=None, help="Cap val size for quick runs")
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--skip_codebert", action="store_true", help="Only train RF")
-    parser.add_argument("--skip_rf", action="store_true", help="Only train CodeBERT")
+    parser.add_argument("--skip_codebert", action="store_true", help="Skip CodeBERT")
+    parser.add_argument("--skip_rf", action="store_true", help="Skip Random Forest")
+    parser.add_argument("--skip_knn", action="store_true", help="Skip K-Nearest Neighbors")
     parser.add_argument("--cpu", action="store_true", help="Use CPU for CodeBERT (avoids MPS OOM on Apple M1/M2/M3)")
     parser.add_argument(
         "--resume_from_checkpoint",
@@ -353,7 +408,7 @@ def main():
     )
 
     train_df, val_df = load_curated()
-    report = {"codebert": None, "random_forest": None, "selected_model": None}
+    report = {"codebert": None, "random_forest": None, "knn": None, "selected_model": None}
 
     try:
         if not args.skip_codebert:
@@ -385,10 +440,29 @@ def main():
         else:
             rf_f1 = -1.0
 
-        if cb_f1 >= rf_f1 and not args.skip_codebert:
-            report["selected_model"] = "codebert"
+        if not args.skip_knn:
+            print("Training K-Nearest Neighbors...")
+            _, knn_f1, knn_metrics = train_knn(
+                train_df, val_df, max_train=args.max_train, max_val=args.max_val
+            )
+            report["knn"] = knn_metrics
+            print(f"KNN validation F1: {knn_f1:.4f}")
+            send_chat_log(f"[Phase 2] KNN done — validation F1: {knn_f1:.4f}")
         else:
-            report["selected_model"] = "random_forest"
+            knn_f1 = -1.0
+
+        # Select model with highest validation F1 (prefer CodeBERT when tied)
+        candidates = []
+        if not args.skip_codebert and report["codebert"]:
+            candidates.append(("codebert", cb_f1))
+        if not args.skip_rf and report["random_forest"]:
+            candidates.append(("random_forest", rf_f1))
+        if not args.skip_knn and report["knn"]:
+            candidates.append(("knn", knn_f1))
+        if candidates:
+            report["selected_model"] = max(candidates, key=lambda x: (x[1], x[0] == "codebert"))[0]
+        else:
+            report["selected_model"] = "codebert"
 
         report_path = os.path.join(RESULTS_DIR, "phase2_validation_report.json")
         with open(report_path, "w") as f:
