@@ -410,6 +410,21 @@ def main():
     train_df, val_df = load_curated()
     report = {"codebert": None, "random_forest": None, "knn": None, "selected_model": None}
 
+    # KNN-only run: merge with existing report so we keep CodeBERT/RF and selected_model
+    report_path = os.path.join(RESULTS_DIR, "phase2_validation_report.json")
+    merged_from_existing = False
+    if args.skip_codebert and args.skip_rf and os.path.isfile(report_path):
+        try:
+            with open(report_path) as f:
+                existing = json.load(f)
+            report["codebert"] = existing.get("codebert")
+            report["random_forest"] = existing.get("random_forest")
+            report["selected_model"] = existing.get("selected_model", "codebert")
+            merged_from_existing = True
+            print(f"[Phase 2] Loaded existing report (keeping CodeBERT/RF, adding/updating KNN only)")
+        except Exception as e:
+            print(f"[Phase 2] Could not load existing report: {e}")
+
     try:
         if not args.skip_codebert:
             import torch
@@ -452,17 +467,19 @@ def main():
             knn_f1 = -1.0
 
         # Select model with highest validation F1 (prefer CodeBERT when tied)
-        candidates = []
-        if not args.skip_codebert and report["codebert"]:
-            candidates.append(("codebert", cb_f1))
-        if not args.skip_rf and report["random_forest"]:
-            candidates.append(("random_forest", rf_f1))
-        if not args.skip_knn and report["knn"]:
-            candidates.append(("knn", knn_f1))
-        if candidates:
-            report["selected_model"] = max(candidates, key=lambda x: (x[1], x[0] == "codebert"))[0]
-        else:
-            report["selected_model"] = "codebert"
+        # When we only ran KNN and merged with existing report, keep existing selected_model
+        if not merged_from_existing:
+            candidates = []
+            if not args.skip_codebert and report["codebert"]:
+                candidates.append(("codebert", cb_f1))
+            if not args.skip_rf and report["random_forest"]:
+                candidates.append(("random_forest", rf_f1))
+            if not args.skip_knn and report["knn"]:
+                candidates.append(("knn", knn_f1))
+            if candidates:
+                report["selected_model"] = max(candidates, key=lambda x: (x[1], x[0] == "codebert"))[0]
+            else:
+                report["selected_model"] = "codebert"
 
         report_path = os.path.join(RESULTS_DIR, "phase2_validation_report.json")
         with open(report_path, "w") as f:

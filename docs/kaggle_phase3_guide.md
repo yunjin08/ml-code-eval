@@ -45,12 +45,12 @@ You need the trained CodeBERT model and the validation report on Kaggle.
 
 **Option B – Create a new Dataset from your Mac**
 
-1. On your Mac, create a zip of the Phase 2 outputs (no need to include the full repo):
+1. On your Mac, create a **slim** zip (no checkpoints; ~500MB). Phase 3 needs report + final models only:
    ```bash
    cd /path/to/code-reviewer-thesis
-   zip -r phase2_results.zip results/phase2_validation_report.json src/models/codebert
+   zip -r phase2_results.zip results src/models/codebert src/models/rf.pkl src/models/knn.pkl
    ```
-   (Or zip the `results` and `src/models` folders from your unzipped `kaggle-ml-results` if that’s where they live.)
+   Do not include `src/models/codebert_checkpoint/` (it’s ~2.5GB and not needed for Phase 3).
 2. **Datasets** → **New dataset** → e.g. `code-reviewer-thesis-phase2-results`.
 3. Upload `phase2_results.zip`.
 4. Note the path, e.g. `/kaggle/input/code-reviewer-thesis-phase2-results`.
@@ -115,7 +115,7 @@ WORK_DIR = "/kaggle/working/code-reviewer-thesis"
 # Data (curated_cpp.csv, splits.json)
 DATA_IN = "/kaggle/input/code-reviewer-thesis-phase3-data"   # or your Phase 2 data dataset path
 # Phase 2 results (phase2_results.zip or folder with results/ and src/models/)
-PHASE2_IN = "/kaggle/input/code-reviewer-thesis-phase2-results"
+PHASE2_IN = "/kaggle/input/phase2-results-2"
 
 os.makedirs(f"{WORK_DIR}/data", exist_ok=True)
 os.makedirs(f"{WORK_DIR}/results", exist_ok=True)
