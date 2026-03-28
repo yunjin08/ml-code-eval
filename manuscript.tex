@@ -104,7 +104,9 @@ February 2026
 
 %, - Permission Page, -
 \newpage
-\thispagestyle{empty}
+\pagenumbering{roman}
+\setcounter{page}{2}
+\thispagestyle{plain}
 \begin{center}
 {\large\bfseries UNIVERSITY OF THE PHILIPPINES CEBU}\\[0.5em]
 College of Science\\[0.3em]
@@ -132,7 +134,7 @@ Special Problem Adviser
 
 %, - Approval Sheet, -
 \newpage
-\thispagestyle{empty}
+\thispagestyle{plain}
 This special problem entitled ``A Hybrid ML and Policy-as-Code Approach for Software Governance: An Empirical Evaluation of Vulnerability Detection'' prepared and submitted by JED EDISON J. DONAIRE is approved by:
 
 \vspace{2em}
@@ -216,6 +218,7 @@ The study followed a four-phase methodology: (1) dataset curation from the Diver
 % ============================================================
 \chapter{THE PROBLEM AND ITS SCOPE}
 % ============================================================
+\pagenumbering{arabic}
 
 \section{Rationale}
 
@@ -539,7 +542,13 @@ Evaluation in this study used a random split over the DiverseVul corpus, so that
 
 \section{Phase 3: Policy-as-Code Rule Coverage}
 
-During Phase 3 execution, an important methodological observation emerged regarding Semgrep rule coverage. When only the \texttt{p/c} registry was used, the PaC channel produced a score of zero for every function in the 33,050-sample test set. This outcome was not attributable to a system error; verification using known-vulnerable C snippets (e.g., functions employing \texttt{gets()} or \texttt{strcpy()} without bounds checking) confirmed that the Semgrep wrapper and rule execution pipeline operated correctly. Rather, the absence of findings was a consequence of the rule-coverage gap: the DiverseVul functions, being extracted from diverse open-source projects, did not consistently employ the explicit anti-patterns targeted by the base \texttt{p/c} registry. Under this initial configuration, weight optimization on the validation set drove the hybrid to $\alpha = 1.00$ and $\beta = 0.00$---i.e., the hybrid was effectively ML-Only, because PaC contributed no discriminative signal.
+\subsection{Empirical Finding: The p/c Registry Coverage Gap}
+
+A key empirical finding of this study emerged during Phase 3 execution: the Semgrep \texttt{p/c} registry, when applied to the DiverseVul function-level corpus, produced zero findings across all 33,050 test-set functions. This result is itself a practically significant finding for the governance community, independent of the hybrid experiment outcome. The \texttt{p/c} registry is among the most widely recommended Semgrep configurations for C/C++ projects, yet its effectiveness was entirely nullified on a dataset specifically curated from real-world CVE-linked vulnerabilities. The finding has a direct message for practitioners: selecting a Semgrep configuration based on reputation or community popularity, without auditing its coverage against the actual vulnerability distribution of the target codebase, can produce a governance layer that generates zero detections despite being technically active.
+
+The absence of findings was not attributable to a pipeline failure. Verification using synthetic, known-vulnerable C snippets (functions employing \texttt{gets()} or \texttt{strcpy()} without bounds checking) confirmed that the Semgrep wrapper and execution pipeline operated correctly; the \texttt{p/c} rules fired as expected on those controlled inputs. Rather, the zero-finding outcome reflected a genuine \textit{coverage mismatch}: the DiverseVul functions, extracted from diverse, large-scale open-source projects, did not consistently present the explicit syntactic anti-patterns that the \texttt{p/c} registry targeted. Many DiverseVul vulnerabilities involved complex memory management idioms, subtle logic errors, or patterns that lay outside the syntactic scope of general-purpose C lint rules. Under this initial configuration, weight optimization on the validation set drove the hybrid to $\alpha = 1.00$ and $\beta = 0.00$---i.e., the hybrid was effectively ML-Only, because PaC contributed no discriminative signal.
+
+\subsection{Rule Set Expansion and Weight Recovery}
 
 Following the expansion of the Semgrep configuration to include the \texttt{p/cwe-top-25} registry and a custom rule set targeting the top DiverseVul CWEs (CWE-119, CWE-787, CWE-125, CWE-476, CWE-416, CWE-190), the PaC channel produced non-zero findings on approximately 11\% of test set functions. With this expanded rule set, optimization (subject to $\beta \geq 0.20$) yielded $\alpha = 0.75$ and $\beta = 0.25$. Table~\ref{tab:weight_evolution} summarizes this before/after, demonstrating that increasing PaC rule coverage is what allowed the PaC channel to receive non-zero weight and thus backs the recommendation to expand and calibrate PaC rule sets for the hybrid to realize its full potential.
 
@@ -585,7 +594,7 @@ Figure~\ref{fig:weight_evolution} illustrates how the optimized hybrid weights s
 \label{fig:weight_evolution}
 \end{figure}
 
-This outcome confirmed the well-documented limitation of rule-based systems: their coverage is bounded by the explicit patterns encoded in their rule sets, and function-level code snippets extracted from large repositories may not contain the syntactic triggers that static rules require \citep{kern2024, rahman2023}. This finding itself contributed a practical insight to the governance literature: PaC systems must be continuously calibrated to the vulnerability profile of the target codebase to remain effective.
+This outcome confirmed the well-documented limitation of rule-based systems: their coverage is bounded by the explicit patterns encoded in their rule sets, and function-level code snippets extracted from large repositories may not contain the syntactic triggers that static rules require \citep{kern2024, rahman2023}. Critically, the zero-finding result under \texttt{p/c} is reported here not as a methodological obstacle but as a \textit{finding with direct practical value}: it demonstrates that even a widely-adopted, officially-maintained rule registry can produce zero governance coverage on a curated, CVE-validated vulnerability corpus. This empirical evidence provides actionable guidance for organizations deploying PaC governance, specifically that rule set selection must be preceded by a coverage audit against a representative sample of the target codebase's vulnerability distribution, not merely against known-safe synthetic inputs.
 
 \section{Phase 4: Primary Evaluation Results}
 
@@ -780,18 +789,19 @@ Table~\ref{tab:mcnemar} presents the results of McNemar's tests comparing the Hy
 
 \begin{table}[H]
 \centering
-\caption{McNemar's Test Results for Block-Decision Correctness\protect\footnotemark}
+\caption{McNemar's Test Results for Block-Decision Correctness\protect\footnotemark[1]}
 \label{tab:mcnemar}
 \begin{tabular}{lccc}
 \toprule
 \textbf{Comparison} & \textbf{p-value} & \textbf{Odds Ratio} & \textbf{95\% CI} \\
 \midrule
-Hybrid vs.\ ML-Only  & 0.157  & 1.00 & [0.06, 16.0] \\
+Hybrid vs.\ ML-Only  & 0.157  & 1.00 & [0.06, 16.0]\protect\footnotemark[2] \\
 Hybrid vs.\ PaC-Only & $<$0.001 & 6.13 & [5.67, 6.63] \\
 \bottomrule
 \end{tabular}
 \end{table}
-\footnotetext{For Hybrid vs.\ ML-Only there were only two discordant pairs (one instance where Hybrid was correct and ML-Only wrong, one where the opposite occurred), so the odds ratio is 1.0 and the 95\% CI is extremely wide; the estimate is uninformative for effect size.}
+\footnotetext[1]{McNemar's test evaluates \textit{correctness} of Block decisions: a governance approach is correct on a given test instance if its Block/non-Block prediction matches the ground-truth vulnerable/non-vulnerable label. Only the $n_{01}$ and $n_{10}$ discordant pairs (instances where one approach was correct and the other was not) contribute to the test statistic; concordant pairs are ignored. The odds ratio is $n_{01}/n_{10}$, measuring how much more often one approach is correct when the approaches disagree.}
+\footnotetext[2]{For Hybrid vs.\ ML-Only there were only two discordant pairs (one where Hybrid was correct and ML-Only was not, one where the opposite held), so the odds ratio is $1/1 = 1.0$ and the 95\% CI is extremely wide. With only two discordant pairs, the test has negligible power and the effect size estimate is uninformative; the result should be interpreted as ``no detectable difference,'' not as evidence of equal performance.}
 
 The comparison between the Hybrid and PaC-Only approaches was highly statistically significant (p $<$ 0.001), with an odds ratio of 6.13 (95\% CI: 5.67--6.63), indicating that the Hybrid approach was approximately six times more likely to make a correct ``Block'' decision than the PaC-Only approach. In contrast, the comparison between the Hybrid and ML-Only approaches was not statistically significant (p = 0.157), with only two discordant pairs where one approach made a correct ``Block'' decision and the other did not. This finding indicated that, at the chosen thresholds, the Block decisions of the Hybrid and ML-Only approaches were nearly indistinguishable.
 
@@ -899,6 +909,20 @@ Transitioning the hybrid governance framework from an empirical evaluation setti
 
 \textbf{Explainability and Audit Trail.} In regulatory contexts governed by frameworks such as the EU Cyber Resilience Act or NIST SSDF, governance decisions must be auditable and traceable. The PaC channel's output was inherently explainable, as each finding referenced a specific rule, a CWE identifier, and the offending code location. The ML channel's output was not intrinsically interpretable; production deployments should augment ML-derived Block decisions with attention visualization or SHAP-based feature attribution to meet auditability requirements. The hybrid architecture, by preserving both channels, was well-positioned to provide PaC-backed explanations for a subset of blocks while falling back to attribution-based explanations for ML-dominated ones.
 
+\subsection{Limitations of the Study}
+
+The following limitations circumscribed the scope and generalizability of this study's findings and should be considered when interpreting the results or designing follow-on research.
+
+\textbf{Limitation 1: Function-Level Evaluation Constrains PaC Effectiveness.} The entire evaluation was conducted on isolated function-level code snippets extracted from DiverseVul. PaC systems such as Semgrep are designed to analyze code within its structural context, including header files, macro definitions, cross-function call sites, and inter-file dependencies. By operating on function snippets stripped of this context, the evaluation systematically reduced PaC's ability to fire on patterns that are detectable at file or repository granularity. The PaC recall of 0.033 should therefore be interpreted as a lower bound on PaC effectiveness in end-to-end governance deployments, not as a representative ceiling. Organizations evaluating PaC for production use should not generalize from this figure without conducting a parallel evaluation on file-level or repository-level corpora.
+
+\textbf{Limitation 2: Random Split May Overestimate Within-Distribution Generalization.} The train, validation, and test sets were formed by a random split over the DiverseVul corpus. As a consequence, the evaluation measured within-distribution generalization, where test samples were drawn from the same projects and time periods as training samples. This is known to overestimate performance relative to cross-project or temporal holdout evaluation protocols. \citet{chen2023} reported that CodeBERT's F1 dropped from approximately 38\% (random split, combined datasets) to approximately 11\% (unseen-projects protocol), a delta that illustrates how substantially random-split metrics can diverge from realistic deployment performance. The metrics reported in this study, including the Hybrid Block-decision F1 of 0.186, were likely optimistic relative to what would be observed under a project-level holdout.
+
+\textbf{Limitation 3: Single Dataset Limits External Validity.} All experimental conclusions were derived from a single benchmark dataset, DiverseVul, which covers C/C++ code drawn from open-source projects on GitHub. Results may not generalize to: (a) other programming languages (Python, Java, JavaScript, Rust), since both the ML model's learned representations and the PaC rule set were calibrated to C/C++ patterns; (b) closed-source or enterprise codebases, whose coding styles, project structures, and vulnerability distributions may differ substantially from open-source repositories; or (c) other vulnerability datasets (e.g., Devign, BigVul, the Juliet Test Suite), which apply different labeling methodologies and may emphasize different CWE distributions. Researchers and practitioners should treat the quantitative findings as specific to the DiverseVul-C/C++ setting until cross-dataset replication is available.
+
+\textbf{Limitation 4: Static Hybrid Weights Were Not Validated Under Distribution Shift.} The hybrid weights ($\alpha = 0.75$, $\beta = 0.25$) and decision thresholds (Block $\geq 0.40$, Review $\geq 0.10$) were optimized on the DiverseVul validation set and evaluated on the DiverseVul test set from the same distribution. There was no evaluation of whether these parameters remained effective when the codebase characteristics, vulnerability mix, or PaC coverage rate changed. In production environments, distribution shift is the norm rather than the exception, and statically tuned parameters may degrade in effectiveness over time without periodic recalibration.
+
+\textbf{Limitation 5: Absence of Human-in-the-Loop and Developer Acceptance Evaluation.} This study evaluated purely technical detection performance. The governance framework's practical utility, including whether developers trust and comply with its decisions, whether the REVIEW tier's volume is operationally manageable, and whether the Block decisions are actionable given the available explanations, was not assessed. These organizational factors are known to significantly influence the real-world impact of automated governance tools \citep{rahman2023}.
+
 % ============================================================
 \chapter{SUMMARY, FINDINGS, CONCLUSIONS, AND RECOMMENDATIONS}
 % ============================================================
@@ -927,7 +951,7 @@ The study produced the following key findings:
 
 \textbf{Finding 4: PaC exhibited high intrinsic precision but very low recall.} When Semgrep rules fired, they produced highly reliable Block predictions (precision = 0.206), but coverage of the vulnerable population was very low (recall = 0.033). This confirmed the complementary profile of PaC, high precision, low recall, relative to ML (lower precision, higher recall).
 
-\textbf{Finding 5: Rule-coverage calibration was the primary determinant of PaC utility.} With \texttt{p/c} only, the PaC channel produced zero findings and weight optimization drove the hybrid to $\alpha = 1.00$, $\beta = 0.00$ (effectively ML-Only). The expansion to \texttt{p/cwe-top-25} plus custom CWE rules produced non-zero PaC signal on approximately 11\% of samples and allowed the optimizer to assign $\alpha = 0.75$, $\beta = 0.25$. This before/after documents that increasing PaC rule coverage is what enables the PaC channel to receive meaningful weight and backs the recommendation that expanding and calibrating PaC rule sets is necessary for the hybrid to realize its full potential.
+\textbf{Finding 5: The p/c Semgrep Registry Produced Zero Findings on DiverseVul---A Practically Significant Coverage Gap.} With \texttt{p/c} only, the PaC channel produced zero findings across all 33,050 test-set functions, and weight optimization drove the hybrid to $\alpha = 1.00$, $\beta = 0.00$ (effectively ML-Only). Verification confirmed that the pipeline operated correctly; the zero-finding result was a genuine coverage mismatch between the \texttt{p/c} rule set and the vulnerability patterns present in DiverseVul. This finding is significant in its own right: it demonstrates that a widely-adopted, officially-maintained Semgrep registry can produce zero governance coverage on a CVE-validated vulnerability corpus, underscoring the necessity of coverage auditing prior to PaC deployment. The expansion to \texttt{p/cwe-top-25} plus custom CWE rules produced non-zero PaC signal on approximately 11\% of samples and allowed the optimizer to assign $\alpha = 0.75$, $\beta = 0.25$. This before/after documents that increasing PaC rule coverage is what enables the PaC channel to receive meaningful weight.
 
 \section{Conclusions}
 
@@ -958,6 +982,14 @@ Based on the study's findings and conclusions, the following recommendations wer
 \textbf{Recommendation 7: Evaluate Alternative ML Architectures for the ML Channel.} This study employed CodeBERT as the ML channel based on its proven efficacy and resource efficiency for code intelligence tasks. Future work should evaluate whether more recent code models, such as GraphCodeBERT (which incorporates data-flow graphs), UniXcoder, or CodeLlama, produce substantially different hybrid governance outcomes. Graph-augmented models may be particularly relevant to addressing the cross-function reasoning limitation identified in the error analysis, since data-flow graph representations encode dependency relationships that sequence-level models cannot exploit.
 
 \textbf{Recommendation 8: Conduct Longitudinal and Organizational Evaluation.} This study evaluated the hybrid framework on a single static test set derived from a random split of DiverseVul, yielding within-distribution results. Longitudinal evaluation using a temporally ordered stream of commits, simulating a live CI/CD pipeline operating on evolving repositories, would provide stronger evidence of the framework's adaptivity and its capacity to detect emerging vulnerability patterns not covered by the initial training data or PaC rule set. Complementary organizational studies should examine developer adoption rates, the cognitive burden introduced by the REVIEW category, alert fatigue from false positives, and alignment of hybrid governance outputs with compliance audit requirements under emerging regulatory frameworks such as the EU Cyber Resilience Act and U.S. Executive Order 14028.
+
+\textbf{Recommendation 9: Re-evaluate with a Temporal Train-Test Split.} The random split used in this study ensured that train, validation, and test samples were drawn from the same distribution of projects and time periods. While this is appropriate for measuring within-distribution generalization, it does not simulate the practical scenario in which a governance system trained on historical vulnerabilities must detect future, previously unseen ones. Future work should partition DiverseVul by commit date, training on pre-2020 commits and evaluating on post-2020 commits, to produce a temporally realistic performance estimate. Given \citet{chen2023}'s finding that unseen-projects evaluation reduces F1 substantially, a temporal split would likely yield lower absolute metrics but would provide a more honest characterization of real-world deployment performance. The hybrid framework's sensitivity to PaC coverage should also be re-examined under this protocol, since the vulnerability distribution in post-2020 commits may differ from the training period.
+
+\textbf{Recommendation 10: Include GraphCodeBERT as an ML Baseline.} This study used CodeBERT, a sequence-level transformer, as the sole ML channel. GraphCodeBERT \citep{guo2021} augments the CodeBERT architecture with data-flow graph representations, enabling the model to capture variable dependency relationships that are invisible to sequence-level attention. Given that the error analysis identified cross-function and data-flow-sensitive vulnerabilities as a primary failure mode, GraphCodeBERT is a natural candidate for addressing this limitation. Future work should compare CodeBERT and GraphCodeBERT on DiverseVul under otherwise identical experimental conditions, and should evaluate whether GraphCodeBERT's superior representation of code semantics improves the precision of the ML channel---a prerequisite for realizing the precision-improving complementarity with PaC that H3 posited.
+
+\textbf{Recommendation 11: Validate on Additional Vulnerability Datasets to Assess Cross-Dataset Generalizability.} This study's findings were derived exclusively from DiverseVul. To assess whether the hybrid architecture and the quantitative performance characteristics generalize beyond this benchmark, future work should evaluate the same framework on: (a) the Juliet Test Suite \citep{nist2023}, a synthetic benchmark with comprehensive CWE coverage that would allow assessing PaC recall under controlled, rule-targeted conditions; (b) the Software Assurance Reference Dataset (SARD), which provides a broader coverage of vulnerability types; and (c) Devign and BigVul, earlier benchmarks that would allow direct comparison with the published CodeBERT results in \citet{chen2023}. Cross-dataset evaluation would also reveal whether the optimal hybrid weights ($\alpha$, $\beta$) and PaC coverage thresholds identified in this study transferred across datasets or required dataset-specific recalibration.
+
+\textbf{Recommendation 12: Publicly Release Code, Configuration, and Artifacts.} This thesis referenced multiple software artifacts that were central to its reproducibility, including the Semgrep custom rule set (\texttt{config/custom\_rules.yaml}), the CodeBERT fine-tuning scripts, the hybrid risk score computation and threshold optimization code, and the bootstrap confidence interval pipeline. These artifacts are not included in the PDF submission. For the study's findings to be independently verified and extended by the research community, these artifacts should be released in a version-controlled public repository with: (a) complete documentation sufficient for replication on the DiverseVul dataset; (b) the exact Semgrep configurations used for each experimental phase; (c) the fine-tuned model checkpoint or the training script with fixed random seeds; and (d) the statistical evaluation scripts, including the paired bootstrap procedure. Public release of research artifacts is increasingly a condition of publication in software engineering venues \citep{zhang2023} and would significantly increase the study's scientific impact.
 
 % ============================================================
 % REFERENCES
