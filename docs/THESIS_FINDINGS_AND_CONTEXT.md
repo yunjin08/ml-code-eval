@@ -146,6 +146,8 @@ Ground truth for “Block”: `label == 1` (vulnerable). Class balance is highly
 
 Hybrid has a slight AUC gain over ML-only; PaC-only has much lower discriminative power on this test set.
 
+**Bootstrap ΔAUC (Hybrid − ML):** Phase 4 runs a paired bootstrap over test rows (default `B = 5000`) and writes `auc_bootstrap_hybrid_minus_ml` in `phase4_evaluation_report.json`, plus `tex/phase4_auc_bootstrap_constants.tex` for the thesis. A typical run yields a 95% CI for ΔAUC that **excludes zero** (small but resolvable ranking gain); re-run after Phase 3 for your exact numbers.
+
 ### 4.3 McNemar (Hybrid vs others)
 
 - **Hybrid vs ML-Only:** p ≈ 0.157 — not statistically significant; Hybrid and ML Block decisions are very similar (only 2 discordant pairs where one is correct and the other is not).

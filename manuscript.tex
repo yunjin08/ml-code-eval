@@ -16,8 +16,9 @@
 \usepackage{tocloft}
 \usepackage{graphicx}
 \usepackage{pgfplots}
+\usepackage{pgfplotstable}
 \pgfplotsset{compat=1.17}
-\usepgfplotslibrary{fillbetween}
+\usepgfplotslibrary{fillbetween,groupplots}
 \usepackage{tikz}
 \usetikzlibrary{positioning}
 \usepackage{booktabs}
@@ -70,6 +71,10 @@
 %,,, - header/footer,,, -
 \pagestyle{plain}
 
+% Phase 4 bootstrap ΔAUC: regenerate with \texttt{python src/phase4\_evaluation.py}
+% PaC sensitivity: regenerate with \texttt{python src/pac\_sensitivity\_sweep.py --pac-gains 1.0,1.5,2.0}
+\input{tex/phase4_auc_bootstrap_constants.tex}
+\input{tex/pac_sensitivity_constants.tex}
 % ============================================================
 \begin{document}
 % ============================================================
@@ -194,7 +199,7 @@ Jed Edison J. Donaire
 
 The rapid integration of Artificial Intelligence (AI) coding assistants into modern software development pipelines has intensified demands on software governance, the automated process of assessing code quality, security, and compliance. Existing frameworks, including DevSecOps pipelines, AI-augmented development tools, and Quality-Security Metrics (QSM) models, addressed these demands only in isolation, leaving critical detection, integration, and adaptivity gaps. This study designed, implemented, and empirically evaluated a Hybrid Governance framework that algorithmically combined the semantic analysis capability of a fine-tuned CodeBERT model with the rule-based enforcement power of a Semgrep Policy-as-Code (PaC) system for vulnerability detection in C/C++ source code.
 
-The study followed a four-phase methodology: (1) dataset curation from the DiverseVul benchmark, (2) model training and selection, (3) a controlled governance experiment comparing ML-Only, PaC-Only, and Hybrid approaches, and (4) statistical evaluation using precision, recall, F1-score, McNemar's test, and ROC-AUC analysis. Results demonstrated that the Hybrid approach achieved a Block-decision F1-score of 0.186 and an AUC of 0.709, matching the ML-Only approach on classification metrics while substantially outperforming the PaC-Only approach (F1 = 0.056, AUC = 0.552). McNemar's test confirmed that the Hybrid approach was statistically significantly superior to PaC-Only (p \textless{} 0.001, OR = 6.13), whereas the difference between Hybrid and ML-Only was not statistically significant (p = 0.157). The findings indicated that in settings where PaC rule coverage is sparse relative to the vulnerability profile of the dataset, ML dominates the hybrid risk score; however, the hybrid architecture preserved the policy channel's capacity to contribute high-precision, low-recall signals and yielded a marginal AUC gain over ML-Only. The study concluded that the Hybrid framework represents a viable and extensible governance architecture, particularly for environments where PaC rule sets are continuously strengthened to match evolving vulnerability patterns.
+The study followed a four-phase methodology: (1) dataset curation from the DiverseVul benchmark, (2) model training and selection, (3) a controlled governance experiment comparing ML-Only, PaC-Only, and Hybrid approaches, and (4) statistical evaluation using precision, recall, F1-score, McNemar's test, ROC-AUC analysis, and a paired bootstrap confidence interval for the Hybrid-minus-ML AUC difference. Results demonstrated that the Hybrid approach achieved a Block-decision F1-score of 0.186 and an AUC of 0.709, matching the ML-Only approach on classification metrics while substantially outperforming the PaC-Only approach (F1 = 0.056, AUC = 0.552). McNemar's test confirmed that the Hybrid approach was statistically significantly superior to PaC-Only (p \textless{} 0.001, OR = 6.13), whereas the difference between Hybrid and ML-Only was not statistically significant (p = 0.157). A paired bootstrap over the test set indicated that the small AUC advantage of Hybrid over ML-Only was statistically resolvable (95\% CI for $\Delta$AUC excluded zero) while remaining small in absolute terms. The findings indicated that in settings where PaC rule coverage is sparse relative to the vulnerability profile of the dataset, ML dominates the hybrid risk score; however, the hybrid architecture preserved the policy channel's capacity to contribute high-precision, low-recall signals and yielded a marginal AUC gain over ML-Only. The study concluded that the Hybrid framework represents a viable and extensible governance architecture, particularly for environments where PaC rule sets are continuously strengthened to match evolving vulnerability patterns.
 
 \vspace{1em}
 \noindent\textbf{Keywords:} Software Governance, Vulnerability Detection, CodeBERT, Policy-as-Code, Semgrep, Machine Learning, Hybrid Governance, DiverseVul, DevSecOps, Software Security
@@ -292,7 +297,7 @@ To ensure clarity and a shared understanding of the concepts discussed in this s
 
 Code quality and security were foundational pillars of robust software development. Code quality encompassed attributes such as maintainability, readability, and efficiency, measured through metrics like technical debt, modularity, and adherence to coding standards \citep{hassan2023}. Conversely, code security prioritized the elimination of vulnerabilities, including zero-day exploits and AI-generated attack vectors \citep{nist2023, microsoft2023}. Though distinct, these concepts were deeply intertwined. Recent studies demonstrated that poor code quality exacerbated security risks: for example, systems with high technical debt were three to five times more likely to contain critical vulnerabilities due to rushed patches and legacy code \citep{allamanis2022}. Similarly, AI-powered static analysis tools showed that enforcing quality practices, such as cyclomatic complexity limits, reduced vulnerabilities by 50\% to 80\% \citep{zhang2023}. As \citet{mcgraw2022} asserted, secure software must first be good software, underscoring quality as a necessary, though insufficient, condition for security.
 
-Disciplined coding practices were universally recognized as the foundation of high-quality software \citep{anderson2023}. These practices included refactoring, modular design, automated testing, and AI-assisted code reviews. \citet{fowler2023} emphasized that AI-driven refactoring tools reduced technical debt by 40\% to 60\% while mitigating security risks such as hardcoded credentials. Likewise, \citet{martin2022} advocated for microservices architectures to enhance readability and minimize supply-chain attacks. Empirical studies reinforced this link: LLM-based pair programming reduced defects by 25\% to 55\%, including OWASP Top 10 vulnerabilities \citep{peng2024}, while DevSecOps pipelines lowered defect density by 35\% to 40\% \citep{google2023}. Collectively, these practices created what \citet{mcconnell2022} termed ``adaptive code complete'' software that was self-documenting, audit-ready, and resilient to emerging threats.
+Disciplined coding practices were universally recognized as the foundation of high-quality software \citep{anderson2023}. These practices included refactoring, modular design, automated testing, and AI-assisted code reviews. \citet{fowler2023} emphasized that AI-driven refactoring tools reduced technical debt by 40\% to 60\% while mitigating security risks such as hardcoded credentials. Likewise, \citet{martin2022} advocated for microservices architectures to enhance readability and minimize supply-chain attacks. Empirical studies reinforced this link: LLM-based pair programming reduced defects by 25\% to 55\%, including OWASP Top 10 vulnerabilities \citep{hou2023}, while DevSecOps pipelines lowered defect density by 35\% to 40\% \citep{google2023}. Collectively, these practices created what \citet{mcconnell2022} termed ``adaptive code complete'' software that was self-documenting, audit-ready, and resilient to emerging threats.
 
 While the individual efficacy of practices such as refactoring, modular design, and AI-assisted reviews was well-established, their isolated implementation often led to inconsistent outcomes. Recent industry analyses revealed that organizations adopting these practices without an overarching framework achieved only 30--50\% of potential quality-security improvements, due to tool fragmentation, uneven team adoption, and misaligned metrics \citep{gitlab2023, nist2023}. This gap between isolated practices and their full potential necessitated systematic approaches.
 
@@ -310,7 +315,7 @@ The third framework focused on the implementation of QSM models, which formalize
 
 Despite the emergence of structured frameworks, several critical limitations hindered their full realization. First, interoperability challenges persisted among toolchains. Even mature ecosystems like GitLab CI/CD required custom scripting or middleware to harmonize quality and security signals \citep{zhang2023}, introducing latency, increasing human error, and diluting the impact of automation \citep{kern2024}.
 
-Second, AI-powered coding tools introduced a new form of technical debt. Generated code might pass immediate vulnerability checks but often lacked architectural conformity, proper modularization, or long-term maintainability \citep{peng2024}. Studies showed that only 30\% of AI-generated patches met internal architectural and documentation standards, resulting in a silent accumulation of rework \citep{imai2023, siddiq2024}. Moreover, current AI-based compliance tools had yet to develop consistent guardrails to reliably prevent hallucinations \citep{magesh2024}.
+Second, AI-powered coding tools introduced a new form of technical debt. Generated code might pass immediate vulnerability checks but often lacked architectural conformity, proper modularization, or long-term maintainability \citep{hou2023}. Studies showed that only 30\% of AI-generated patches met internal architectural and documentation standards, resulting in a silent accumulation of rework \citep{imai2023, siddiq2023}. Moreover, current AI-based compliance tools had yet to develop consistent guardrails to reliably prevent hallucinations \citep{magesh2024}.
 
 Third, the human dimension remained under-addressed. Security compliance often relied on developers manually enforcing rules even within automated pipelines \citep{rahman2023}. This dependency was exacerbated in agile environments, where rapid iteration frequently circumvented governance layers \citep{nist2023}.
 
@@ -352,8 +357,8 @@ The architecture processed C/C++ source functions through two independent channe
 \centering
 \begin{tikzpicture}[
     node distance=0.9cm,
-    block/.style={rectangle, draw, minimum width=2.2cm, minimum height=0.6cm, font=\small},
-    small/.style={rectangle, draw, minimum width=1.8cm, minimum height=0.5cm, font=\footnotesize},
+    block/.style={rectangle, draw, minimum width=2.2cm, minimum height=0.6cm, font=\small, align=center},
+    small/.style={rectangle, draw, minimum width=1.8cm, minimum height=0.5cm, font=\footnotesize, align=center},
 ]
 \node[block] (input) {C/C++ function};
 \node[block, below left=of input, xshift=-0.5cm] (ml) {ML channel\\CodeBERT};
@@ -462,6 +467,14 @@ McNemar's test was used to compare the paired nominal classification outcomes (c
 \subsubsection{Discriminatory Power and Complementarity Analysis}
 
 ROC curves were plotted and the Area Under the Curve (AUC) was calculated for the ML-Only and Hybrid continuous risk scores to assess overall discriminatory ability across all possible decision thresholds, providing a threshold-agnostic view of model performance.
+
+\subsubsection{Bootstrap Confidence Interval for the AUC Difference}
+
+To assess whether the observed advantage of the Hybrid continuous risk score over the ML-Only score was distinguishable from sampling variability, a \textbf{paired bootstrap} over test-set instances was applied to the difference $\Delta\mathrm{AUC} = \mathrm{AUC}_{\mathrm{Hybrid}} - \mathrm{AUC}_{\mathrm{ML}}$. For each of $B = \PhaseFourBootstrapB$ iterations, $n$ rows were resampled \textit{with replacement} from the DiverseVul test set ($n$ equal to the test sample size). On each bootstrap replicate, $\mathrm{AUC}_{\mathrm{ML}}$ and $\mathrm{AUC}_{\mathrm{Hybrid}}$ were recomputed from the paired scores (\texttt{ml\_confidence}, \texttt{hybrid\_risk}) and the same binary labels; replicates in which all labels were identical were discarded and redrawn. The reported \textbf{95\% percentile confidence interval} for $\Delta\mathrm{AUC}$ was taken as the 2.5th and 97.5th percentiles of the bootstrap distribution. A \textbf{one-sided bootstrap proportion} (the fraction of bootstrap replicates with $\Delta_b \leq 0$ when the point estimate $\hat{\Delta} > 0$) summarized how often the replicate difference was non-positive when the point estimate favored Hybrid. This procedure follows common practice for comparing correlated ROC areas on the same cohort without retraining the classifier \citep{efron1993}.
+
+\subsubsection{Post-hoc sensitivity to PaC weight ($\beta$)}
+
+To map how hybrid performance depends on the relative weight of PaC versus ML, a \textbf{post-hoc sweep} was conducted over $\beta \in [0,1]$ with $\alpha = 1 - \beta$ at fixed normalized scores (from the Phase~3 validation min--max statistics). For each $\beta$, Block and Review thresholds were re-tuned on the validation set to maximize Block F1 using the same grid as Phase~3. Test-set Block F1 and $\Delta\mathrm{AUC} = \mathrm{AUC}_{\mathrm{Hybrid}} - \mathrm{AUC}_{\mathrm{ML}}$ were then computed. Unless noted otherwise, the sweep uses \texttt{pac\_gain} $= 1.0$, i.e., the observed normalized PaC scores. Multiplying normalized PaC by a gain $g > 1$ before clipping to $[0,1]$ simulates a stronger PaC channel (e.g., richer rules) without re-running Semgrep; gains $\{1.5, 2.0\}$ were summarized alongside the default. This supplements the single Phase~3 configuration (including $\beta = \PacSensPhaseThreeBeta$ with $\beta \geq 0.20$) by tracing the response of F1 and $\Delta\mathrm{AUC}$ across $\beta$.
 
 \subsection{Hypothesis Validation}
 
@@ -629,6 +642,25 @@ Hybrid    & 0.7086 \\
 \end{tabular}
 \end{table}
 
+Table~\ref{tab:auc_bootstrap} reports paired bootstrap inference for $\Delta\mathrm{AUC} = \mathrm{AUC}_{\mathrm{Hybrid}} - \mathrm{AUC}_{\mathrm{ML}}$ on the same test instances (see Methodology).
+
+\begin{table}[H]
+\centering
+\caption{Bootstrap inference for the paired AUC difference (Hybrid $-$ ML-Only) on the DiverseVul test set}
+\label{tab:auc_bootstrap}
+\begin{tabular}{lc}
+\toprule
+\textbf{Quantity} & \textbf{Value} \\
+\midrule
+Point estimate $\Delta\mathrm{AUC}$ & \PhaseFourDeltaAucPoint \\
+95\% bootstrap CI for $\Delta\mathrm{AUC}$ & $[$\PhaseFourDeltaAucCILow, \PhaseFourDeltaAucCIHigh$]$ \\
+Bootstrap replicates $B$ & \PhaseFourBootstrapB \\
+One-sided bootstrap proportion\protect\footnotemark & \PhaseFourBootstrapPOneSided \\
+\bottomrule
+\end{tabular}
+\end{table}
+\footnotetext{Fraction of bootstrap replicates with $\Delta_b \leq 0$ when $\hat{\Delta} > 0$. Values near zero indicate that non-positive differences under resampling are rare.}
+
 Figure~\ref{fig:auc} shows ROC-style curves (TPR vs.\ FPR) for each approach, with the \textbf{area under each curve} shaded; that area equals the reported AUC. The diagonal (dashed) is random guessing (AUC = 0.5); curves above it indicate better discrimination.
 
 \begin{figure}[H]
@@ -649,17 +681,17 @@ Figure~\ref{fig:auc} shows ROC-style curves (TPR vs.\ FPR) for each approach, wi
 % X-axis (y=0) for fill-between
 \addplot[name path=axis, draw=none, domain=0:1] {0};
 % Define curves (area under curve = AUC via tpr = fpr^gamma, gamma = 1/AUC - 1)
-\addplot[name path=rocPac, draw=none, domain=0:1, samples=51] {x^0.814};
-\addplot[name path=rocMl, draw=none, domain=0:1, samples=51] {x^0.42};
-\addplot[name path=rocHybrid, draw=none, domain=0:1, samples=51] {x^0.41};
+\addplot[name path=rocPac, draw=none, domain=0:1, samples=33] {x^0.814};
+\addplot[name path=rocMl, draw=none, domain=0:1, samples=33] {x^0.42};
+\addplot[name path=rocHybrid, draw=none, domain=0:1, samples=33] {x^0.41};
 % Shaded area under each curve (drawn first so curves show on top)
 \addplot[red!30, opacity=0.7, forget plot] fill between[of=rocPac and axis];
 \addplot[blue!30, opacity=0.7, forget plot] fill between[of=rocMl and axis];
 \addplot[green!30, opacity=0.7, forget plot] fill between[of=rocHybrid and axis];
 % Draw curves on top
-\addplot[red!70!black, thick, domain=0:1, samples=51] {x^0.814};
-\addplot[blue!70!black, thick, domain=0:1, samples=51] {x^0.42};
-\addplot[green!50!black, thick, domain=0:1, samples=51] {x^0.41};
+\addplot[red!70!black, thick, domain=0:1, samples=33] {x^0.814};
+\addplot[blue!70!black, thick, domain=0:1, samples=33] {x^0.42};
+\addplot[green!50!black, thick, domain=0:1, samples=33] {x^0.41};
 % Diagonal: random (AUC = 0.5)
 \addplot[dashed, thick, gray] coordinates {(0,0) (1,1)};
 \legend{PaC-Only (AUC=0.55), ML-Only (AUC=0.70), Hybrid (AUC=0.71), Random (AUC=0.5)}
@@ -669,7 +701,55 @@ Figure~\ref{fig:auc} shows ROC-style curves (TPR vs.\ FPR) for each approach, wi
 \label{fig:auc}
 \end{figure}
 
-The Hybrid approach achieved a marginally higher AUC (0.709) compared to the ML-Only approach (0.704), indicating a slight improvement in threshold-agnostic discriminatory power when the PaC signal was incorporated. The PaC-Only approach's AUC of 0.552 was barely above random chance, reflecting its very sparse signal on the DiverseVul test set. Critically, the AUC improvement of the Hybrid over ML-Only, while small in absolute terms (+0.004), carries practical significance beyond the single-threshold evaluation. It indicated that the continuous hybrid risk score ranked vulnerable functions marginally more accurately than the ML score alone across all operating points. For governance systems that use the risk score for prioritization,  for example, ordering a queue of code review tasks by severity,  this improvement translates to marginally more vulnerable functions appearing at the top of the review queue, even if the improvement is undetectable at any single fixed Block threshold.
+The Hybrid approach achieved a marginally higher AUC (0.709) compared to the ML-Only approach (0.704), indicating a slight improvement in threshold-agnostic discriminatory power when the PaC signal was incorporated. The PaC-Only approach's AUC of 0.552 was barely above random chance, reflecting its very sparse signal on the DiverseVul test set. Critically, the AUC improvement of the Hybrid over ML-Only, while small in absolute terms ($\Delta\mathrm{AUC} \approx 0.004$), was supported by bootstrap inference on the paired test scores: the 95\% percentile interval for $\Delta\mathrm{AUC}$ excluded zero (Table~\ref{tab:auc_bootstrap}), so the ranking gain was statistically resolvable under case resampling even though it remained modest in magnitude. This distinction matters for interpretation: the continuous hybrid risk score ranked vulnerable functions slightly more accurately than the ML score alone across operating points, even though the tuned Block threshold left binary precision and F1 unchanged relative to ML-Only. For governance systems that use the risk score for prioritization, for example ordering a queue of code review tasks by severity, that improvement can shift ordering at the margin even when it is invisible at a single fixed Block threshold.
+
+\subsection{Bootstrap $\Delta$AUC and PaC weight sensitivity}
+
+The point estimate and bootstrap interval for $\Delta\mathrm{AUC}$ in Table~\ref{tab:auc_bootstrap} correspond to the \textit{single} hybrid risk vector produced by Phase~3 ($\alpha = 0.75$, $\beta = 0.25$ on normalized scores). To examine whether that operating point sits near the ridge of the hybrid response surface, a post-hoc $\beta$ sweep was evaluated as described in the Methodology.
+
+Figure~\ref{fig:pac_sensitivity} plots test Block F1 and $\Delta\mathrm{AUC}$ versus $\beta$ for \texttt{pac\_gain} $= 1.0$. The vertical line marks Phase~3's PaC weight ($\beta = \PacSensPhaseThreeBeta$). Under per-$\beta$ validation threshold tuning, $\Delta\mathrm{AUC}$ was largest at $\beta \approx \PacSensPeakDeltaAucBeta$ (point value $\approx \PacSensPeakDeltaAuc$), coinciding with Phase~3's tuned $\beta$ and confirming that the Phase~4 hybrid score lies near the $\Delta\mathrm{AUC}$ peak along this slice. Peak Block F1 along the sweep occurred at a \textit{higher} $\beta \approx \PacSensPeakFOneBeta$ (F1 $\approx \PacSensPeakFOne$), illustrating that maximizing validation-tuned Block F1 and maximizing continuous $\Delta\mathrm{AUC}$ need not occur at the same $\beta$ when both metrics are traced independently. At $\beta = 1$, hybrid risk reduces to PaC-only normalization and both curves reflect the PaC-Only operating point (low F1, $\Delta\mathrm{AUC} \ll 0$ relative to ML).
+
+Table~\ref{tab:pac_gain_peaks} reports peaks under scaled PaC (\texttt{pac\_gain} $\in \{1.0, 1.5, 2.0\}$). Stronger PaC (higher gain) modestly increases peak F1 and shifts the $\beta$ at which $\Delta\mathrm{AUC}$ is maximized toward \textit{lower} values, consistent with needing less explicit PaC weight when the underlying violation signal is amplified.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{groupplot}[
+  group style={group size=1 by 2, vertical sep=1.35cm, x descriptions at=edge bottom},
+  width=0.88\textwidth,
+  height=2.85cm,
+  xmin=0, xmax=1,
+  xtick={0,0.25,0.5,0.75,1},
+  grid=major,
+  tick label style={font=\small},
+  label style={font=\small},
+]
+\nextgroupplot[ylabel={Block F1}, ymin=0.05, ymax=0.20]
+\addplot[thick, blue!70!black] table[x=beta, y=f1, col sep=comma] {\PacSensGainOneTable};
+\draw[dashed, gray] (axis cs:0.25,0.05) -- (axis cs:0.25,0.20);
+\nextgroupplot[ylabel={$\Delta$AUC (Hybrid$-$ML)}, ymin=-0.17, ymax=0.006, xlabel={$\beta$ (PaC weight)}]
+\addplot[thick, green!50!black] table[x=beta, y=delta_auc, col sep=comma] {\PacSensGainOneTable};
+\draw[dashed, gray] (axis cs:0.25,-0.17) -- (axis cs:0.25,0.006);
+\end{groupplot}
+\end{tikzpicture}
+\caption{Post-hoc sensitivity to PaC weight $\beta$ with \texttt{pac\_gain} $= 1$. \textbf{Top:} test Block F1 after validation threshold tuning at each $\beta$. \textbf{Bottom:} $\Delta\mathrm{AUC}$. Vertical line: Phase~3 $\beta=\PacSensPhaseThreeBeta$. Peak $\Delta\mathrm{AUC}$ near $\beta\approx\PacSensPeakDeltaAucBeta$; peak F1 near $\beta\approx\PacSensPeakFOneBeta$.}
+\label{fig:pac_sensitivity}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Peaks from PaC weight sweeps (validation thresholds re-tuned per $\beta$; \texttt{pac\_gain} scales normalized PaC before mixing with ML).}
+\label{tab:pac_gain_peaks}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{\texttt{pac\_gain}} & \textbf{$\beta$ at peak F1} & \textbf{Peak F1} & \textbf{$\beta$ at peak $\Delta$AUC} & \textbf{Peak $\Delta$AUC} \\
+\midrule
+1.0 & 0.65 & 0.191 & 0.25 & 0.0042 \\
+1.5 & 0.60 & 0.192 & 0.15 & 0.0042 \\
+2.0 & 0.65 & 0.193 & 0.15 & 0.0041 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 
 \subsection{McNemar's Test and Effect Size}
@@ -707,7 +787,7 @@ H2 posited that the Hybrid approach would demonstrate higher Recall for critical
 
 H3 posited that the Hybrid approach would demonstrate higher Precision for critical defects than the ML-Only approach, by reducing false positives through the contextual filter of static analysis. This hypothesis was \textbf{not supported at the evaluated operating threshold}. Both the Hybrid and ML-Only approaches achieved identical precision at the tuned Block threshold (0.127), and McNemar's test confirmed the absence of a statistically significant difference in Block-decision correctness (p = 0.157, only 2 discordant pairs).
 
-However, the hypothesis was not rejected on all dimensions. The continuous Hybrid risk score achieved a marginally higher ROC-AUC (0.709) compared to the ML-Only score (0.704), indicating that the fusion of the PaC signal did add a small but real amount of discriminatory information when the score was treated as a continuous ranking rather than a single binary decision. This distinction is important: at a \textit{fixed} Block threshold of 0.40, the sparse PaC signal (non-zero on only $\approx$11\% of test functions) was insufficient to alter the Block/Approve boundary for any function that was not already on that boundary due to the ML score alone, leaving precision unchanged. However, across \textit{all possible thresholds},  as reflected by the AUC,  the hybrid score ranked vulnerable functions marginally better than the ML score alone.
+However, the hypothesis was not rejected on all dimensions. The continuous Hybrid risk score achieved a marginally higher ROC-AUC (0.709) compared to the ML-Only score (0.704), indicating that the fusion of the PaC signal did add a small amount of discriminatory information when the score was treated as a continuous ranking rather than a single binary decision. Paired bootstrap inference on $\Delta\mathrm{AUC}$ (Table~\ref{tab:auc_bootstrap}) further indicated that this advantage was statistically resolvable under case resampling (95\% CI excluding zero), while remaining small in absolute terms. This distinction is important: at a \textit{fixed} Block threshold of 0.40, the sparse PaC signal (non-zero on only $\approx$11\% of test functions) was insufficient to alter the Block/Approve boundary for any function that was not already on that boundary due to the ML score alone, leaving precision unchanged. However, across \textit{all possible thresholds}, as reflected by the AUC, the hybrid score ranked vulnerable functions marginally better than the ML score alone.
 
 The mechanism by which H3 was expected to operate,  PaC reducing false positives by providing a high-precision filter,  was structurally present in the framework, but was constrained by PaC's low recall (0.033) and sparse coverage. In theory, if the PaC channel fires on a false positive that the ML model assigns a high confidence score, adding a PaC score of zero to that function's hybrid risk would lower it below the Block threshold, thereby reducing false positives and improving precision. This mechanism could only produce a measurable precision gain when PaC coverage was high enough to fire on a meaningful fraction of the ML model's false positives. With only 11\% of test functions receiving any PaC findings, that condition was not met in this evaluation. H3 therefore remained an architecturally sound hypothesis whose empirical validation required a higher-coverage PaC rule set than was achievable on the DiverseVul function-level corpus with the current configuration.
 
@@ -732,7 +812,7 @@ The hybrid architecture was designed to leverage precisely this complementarity,
 
 The findings carried several practical implications for organizations designing automated code governance pipelines. First, ML-based vulnerability detection, even at the moderate accuracy levels demonstrated by CodeBERT on DiverseVul, offered substantially broader coverage of critical defects than PaC alone, suggesting that ML should be the primary detection mechanism in any hybrid governance architecture. Second, PaC provided an interpretable, auditable layer that was essential for regulatory compliance and developer communication, justifying its inclusion even when its recall was low. Third, the hybrid architecture offered an extensible foundation: as PaC rule sets were expanded and aligned with the target codebase's vulnerability profile, the PaC channel's contribution to the hybrid risk score would increase, potentially yielding the precision gains that H3 predicted but that were not realized in this evaluation.
 
-These implications aligned with the broader literature on unified governance models \citep{zhang2023} and on the complementarity of ML and rule-based approaches in software quality assurance \citep{zhou2024, berger2021}. They also underscored the practical research agenda identified by \citet{kern2024}: the primary remaining challenge in integrating static analysis and ML is not algorithmic but operational, ensuring that both channels are continuously calibrated to the evolving characteristics of the codebase and its regulatory environment.
+These implications aligned with the broader literature on unified governance models \citep{zhang2023} and on the complementarity of ML and rule-based approaches in software quality assurance \citep{zhou2024}. They also underscored the practical research agenda identified by \citet{kern2024}: the primary remaining challenge in integrating static analysis and ML is not algorithmic but operational, ensuring that both channels are continuously calibrated to the evolving characteristics of the codebase and its regulatory environment.
 
 % ============================================================
 \chapter{SUMMARY, FINDINGS, CONCLUSIONS, AND RECOMMENDATIONS}
@@ -742,7 +822,7 @@ These implications aligned with the broader literature on unified governance mod
 
 The rapid proliferation of AI coding assistants in modern software development pipelines created an urgent need for governance frameworks capable of detecting vulnerabilities generated or introduced by AI tools with greater accuracy and coverage than either rule-based or ML-based approaches could achieve in isolation. This study addressed that need by designing, implementing, and empirically evaluating a Hybrid ML-PaC Governance framework for vulnerability detection in C/C++ source code.
 
-The framework integrated a fine-tuned CodeBERT model as the ML channel and a Semgrep Policy-as-Code system as the PaC channel, combining their outputs through a tunable weighted linear formula into a unified risk score. A threshold-based Decision Engine then classified each code function as BLOCK, REVIEW, or APPROVE. The study followed a four-phase methodology: (1) dataset curation from DiverseVul via Hugging Face, yielding approximately 264,000 training samples and 33,000 test samples; (2) model training and selection, in which CodeBERT substantially outperformed a Random Forest baseline (F1 = 0.189 vs.\ 0.024 on the validation set) and was selected for the governance experiment; (3) a controlled governance experiment comparing ML-Only, PaC-Only, and Hybrid approaches on the 33,050-sample test set; and (4) evaluation and statistical analysis using precision, recall, F1-score, ROC-AUC, McNemar's test, and odds ratios.
+The framework integrated a fine-tuned CodeBERT model as the ML channel and a Semgrep Policy-as-Code system as the PaC channel, combining their outputs through a tunable weighted linear formula into a unified risk score. A threshold-based Decision Engine then classified each code function as BLOCK, REVIEW, or APPROVE. The study followed a four-phase methodology: (1) dataset curation from DiverseVul via Hugging Face, yielding approximately 264,000 training samples and 33,000 test samples; (2) model training and selection, in which CodeBERT substantially outperformed a Random Forest baseline (F1 = 0.189 vs.\ 0.024 on the validation set) and was selected for the governance experiment; (3) a controlled governance experiment comparing ML-Only, PaC-Only, and Hybrid approaches on the 33,050-sample test set; and (4) evaluation and statistical analysis using precision, recall, F1-score, ROC-AUC, McNemar's test, odds ratios, a paired bootstrap confidence interval for the Hybrid-minus-ML AUC difference, and a post-hoc sweep over the PaC weight $\beta$ with validation thresholds re-tuned at each setting.
 
 A key methodological refinement during Phase 3 was the expansion of the Semgrep configuration. With \texttt{p/c} only, the PaC channel produced zero findings on the validation and test sets, and weight optimization drove the hybrid to $\alpha = 1.00$, $\beta = 0.00$ (effectively ML-Only). The configuration was expanded to include \texttt{p/cwe-top-25} and a custom rule set targeting the top DiverseVul CWEs, after which PaC produced non-zero findings on approximately 11\% of test set functions and the optimizer (with a minimum PaC weight constraint $\beta \geq 0.20$) yielded $\alpha = 0.75$, $\beta = 0.25$. This before/after documents that expanding PaC rule sets is what allows the PaC channel to receive non-zero weight. The final tuned configuration used for evaluation was $\alpha = 0.75$, $\beta = 0.25$, with a Block threshold of 0.40.
 
@@ -756,13 +836,13 @@ The study produced the following key findings:
 
 \textbf{Finding 3: The Hybrid approach was statistically significantly superior to PaC-Only.} The Hybrid approach achieved a Block-decision F1-score of 0.186 vs.\ 0.056 for PaC-Only, and a Recall of 0.346 vs.\ 0.033. McNemar's test confirmed strong statistical significance (p $<$ 0.001), with an odds ratio of 6.13 (95\% CI: 5.67--6.63), indicating that the Hybrid approach was approximately six times more likely to make a correct ``Block'' decision than PaC-Only.
 
-\textbf{Finding 3b: The Hybrid approach yielded a marginal but consistent improvement in continuous discriminatory power over ML-Only.} While the Hybrid and ML-Only approaches were statistically indistinguishable on the binary Block-decision metrics (precision, recall, F1), the Hybrid approach achieved a higher ROC-AUC (0.709 vs.\ 0.704). This AUC gain reflected a real, if small, improvement in how the continuous hybrid risk score ranked vulnerable functions relative to non-vulnerable ones across all possible decision thresholds. Importantly, this improvement occurred without any degradation of the binary decision metrics, confirming that adding the PaC channel to the ML channel did not introduce noise or harm to the existing ML signal. The gain was bounded by the sparse PaC coverage (non-zero on $\approx$11\% of test functions); under higher PaC coverage, a larger AUC improvement and a measurable precision gain would be expected.
+\textbf{Finding 3b: The Hybrid approach yielded a marginal but consistent improvement in continuous discriminatory power over ML-Only.} While the Hybrid and ML-Only approaches were statistically indistinguishable on the binary Block-decision metrics (precision, recall, F1), the Hybrid approach achieved a higher ROC-AUC (0.709 vs.\ 0.704 for ML-Only; 0.552 for PaC-Only). A paired bootstrap over the test set indicated that the difference $\Delta\mathrm{AUC} = \mathrm{AUC}_{\mathrm{Hybrid}} - \mathrm{AUC}_{\mathrm{ML}}$ was positive with a 95\% percentile confidence interval excluding zero (Table~\ref{tab:auc_bootstrap}), so the ranking advantage was statistically resolvable under case resampling while remaining small in absolute magnitude. Importantly, this improvement occurred without any degradation of the binary decision metrics, confirming that adding the PaC channel did not harm the existing ML signal. The gain was bounded by sparse PaC coverage (non-zero on $\approx$11\% of test functions); under higher PaC coverage, a larger AUC improvement and a measurable precision gain would be expected.
 
-\textbf{Finding 4: The Hybrid approach achieved a marginal but consistent AUC improvement over ML-Only.} Hybrid AUC was 0.709 vs.\ 0.704 for ML-Only and 0.552 for PaC-Only, indicating that the continuous hybrid risk score carried slightly more discriminatory information than the ML score alone.
+\textbf{Finding 3c: Post-hoc $\beta$ sensitivity aligned Phase~3 with the $\Delta\mathrm{AUC}$ ridge but not with peak Block F1 under per-$\beta$ tuning.} Sweeping $\beta$ with validation thresholds re-tuned at each value (Figure~\ref{fig:pac_sensitivity}, Table~\ref{tab:pac_gain_peaks}) showed that $\Delta\mathrm{AUC}$ was largest near $\beta \approx 0.25$, matching the Phase~3 tuned PaC weight, whereas peak Block F1 along the sweep occurred at higher $\beta$ (approximately $0.60$--$0.65$ for \texttt{pac\_gain} $= 1.0$). Scaled PaC (\texttt{pac\_gain} $> 1$) modestly raised peak F1 and shifted the $\Delta\mathrm{AUC}$-maximizing $\beta$ downward, illustrating a trade-off between threshold-tuned binary F1 and continuous ranking quality as PaC influence varies.
 
-\textbf{Finding 5: PaC exhibited high intrinsic precision but very low recall.} When Semgrep rules fired, they produced highly reliable Block predictions (precision = 0.206), but coverage of the vulnerable population was very low (recall = 0.033). This confirmed the complementary profile of PaC, high precision, low recall, relative to ML (lower precision, higher recall).
+\textbf{Finding 4: PaC exhibited high intrinsic precision but very low recall.} When Semgrep rules fired, they produced highly reliable Block predictions (precision = 0.206), but coverage of the vulnerable population was very low (recall = 0.033). This confirmed the complementary profile of PaC, high precision, low recall, relative to ML (lower precision, higher recall).
 
-\textbf{Finding 6: Rule-coverage calibration was the primary determinant of PaC utility.} With \texttt{p/c} only, the PaC channel produced zero findings and weight optimization drove the hybrid to $\alpha = 1.00$, $\beta = 0.00$ (effectively ML-Only). The expansion to \texttt{p/cwe-top-25} plus custom CWE rules produced non-zero PaC signal on approximately 11\% of samples and allowed the optimizer to assign $\alpha = 0.75$, $\beta = 0.25$. This before/after documents that increasing PaC rule coverage is what enables the PaC channel to receive meaningful weight and backs the recommendation that expanding and calibrating PaC rule sets is necessary for the hybrid to realize its full potential.
+\textbf{Finding 5: Rule-coverage calibration was the primary determinant of PaC utility.} With \texttt{p/c} only, the PaC channel produced zero findings and weight optimization drove the hybrid to $\alpha = 1.00$, $\beta = 0.00$ (effectively ML-Only). The expansion to \texttt{p/cwe-top-25} plus custom CWE rules produced non-zero PaC signal on approximately 11\% of samples and allowed the optimizer to assign $\alpha = 0.75$, $\beta = 0.25$. This before/after documents that increasing PaC rule coverage is what enables the PaC channel to receive meaningful weight and backs the recommendation that expanding and calibrating PaC rule sets is necessary for the hybrid to realize its full potential.
 
 \section{Conclusions}
 
@@ -770,7 +850,7 @@ In conclusion, the Hybrid ML-PaC Governance framework demonstrated clear superio
 
 First, a hybrid governance architecture is a viable and extensible foundation for software governance. Even when the PaC channel produced sparse signals, as was the case with function-level DiverseVul samples and a general-purpose rule set, the hybrid framework did not degrade relative to ML-Only; it preserved ML's recall while retaining the structural capacity to incorporate high-precision policy signals. This ``no degradation'' property is a practical virtue for organizations transitioning from ML-Only to hybrid governance.
 
-Second, the modest AUC improvement of the Hybrid approach over ML-Only suggests that the fusion of ML and PaC signals provides incremental but consistent discrimination gains even under sparse PaC coverage. In an enterprise governance context, where the cost of a missed critical vulnerability is high and the operating threshold is typically set aggressively, AUC improvements translate to better coverage at the same false positive rate.
+Second, the modest AUC improvement of the Hybrid approach over ML-Only suggests that the fusion of ML and PaC signals provides incremental but consistent discrimination gains even under sparse PaC coverage. Paired bootstrap inference indicated that $\Delta\mathrm{AUC}$ was positive with a 95\% confidence interval excluding zero (Table~\ref{tab:auc_bootstrap}), supporting a statistically resolvable though small ranking advantage. In an enterprise governance context, where the cost of a missed critical vulnerability is high and the operating threshold is typically set aggressively, AUC improvements translate to better coverage at the same false positive rate.
 
 Third, the dominance of the ML channel in this evaluation did not diminish the governance value of PaC. PaC's interpretability, auditability, and high precision when it fired were properties that ML alone could not replicate and that were essential for regulatory compliance and developer communication. The hybrid architecture appropriately preserved both channels, and future investment in expanding and calibrating the PaC rule set would be expected to increase PaC's recall and its contribution to the hybrid risk score.
 

@@ -26,6 +26,7 @@ This document describes the governance experiment (Phase 3) and the statistical 
 | Artifact | Path | Description |
 |----------|------|-------------|
 | Experiment results | `results/phase3_experiment_results.csv` | Per test sample: `id`, `code`, `label`, `split`, `ml_confidence`, `pac_score`, `hybrid_risk`, `decision_ml`, `decision_pac`, `decision_hybrid`. |
+| Validation scores | `results/phase3_validation_scores.csv` | Validation subset used for tuning: `id`, `label`, `ml_confidence`, `pac_score` (for `pac_sensitivity_sweep.py`). |
 | Hybrid config | `results/phase3_hybrid_config.json` | Chosen `alpha`, `beta`, `t_block`, `t_review`, and validation min/max for score normalization (`val_ml_min`, `val_ml_max`, `val_pac_min`, `val_pac_max`). |
 
 **Command (full test set):**
@@ -78,6 +79,16 @@ These are the main performance numbers for the thesis (Section 3.5.1).
 - **PaC-Only:** AUC from `pac_score` vs `label` (when applicable).  
 - **Reported:** AUC values in `phase4_evaluation_report.json` under `roc_auc`.
 
+### 3.2.4b Paired bootstrap for ΔAUC (Hybrid − ML)
+
+- **Purpose:** Quantify sampling uncertainty for **ΔAUC = AUC(Hybrid) − AUC(ML)** on the **same** test rows (paired scores).  
+- **Procedure:** `B` bootstrap replicates (default **5000**); each replicate resamples `n` test rows with replacement, recomputes both AUCs, stores the difference. Replicates with a single class in the resampled labels are redrawn.  
+- **Reported:** Point estimate, 95% percentile CI for ΔAUC, whether CI excludes zero, one-sided bootstrap proportion (fraction of replicates with Δ ≤ 0 when point Δ > 0).  
+- **Outputs:**  
+  - `phase4_evaluation_report.json` → `auc_bootstrap_hybrid_minus_ml`  
+  - `tex/phase4_auc_bootstrap_constants.tex` → `\PhaseFourDeltaAucPoint`, `\PhaseFourDeltaAucCILow`, `\PhaseFourDeltaAucCIHigh`, `\PhaseFourBootstrapB`, `\PhaseFourBootstrapPOneSided` for `manuscript.tex`  
+- **CLI:** `python src/phase4_evaluation.py` (defaults: `B=5000`, seed 42). Faster iteration: `--bootstrap-n 1000`. Skip bootstrap: `--bootstrap-n 0`. Skip writing LaTeX: `--no-latex-constants`.
+
 ### 3.2.5 Hypothesis validation
 
 - **H1:** Hybrid F1(Block) > ML-Only F1 and > PaC-Only F1.  
@@ -90,8 +101,9 @@ For each, we report whether the comparison supports the hypothesis and the relev
 
 | Artifact | Path | Description |
 |----------|------|-------------|
-| Full report | `results/phase4_evaluation_report.json` | All metrics, McNemar, odds ratios, AUCs, hypothesis flags. |
-| Summary | `results/phase4_results_summary.txt` | Human-readable summary of metrics and H1–H3. |
+| Full report | `results/phase4_evaluation_report.json` | All metrics, McNemar, odds ratios, AUCs, bootstrap ΔAUC, hypothesis flags. |
+| Summary | `results/phase4_results_summary.txt` | Human-readable summary of metrics, bootstrap ΔAUC, and H1–H3. |
+| LaTeX constants | `tex/phase4_auc_bootstrap_constants.tex` | `\providecommand` macros for the thesis table (regenerated each Phase 4 run). |
 
 **Command:**
 
@@ -99,7 +111,7 @@ For each, we report whether the comparison supports the hypothesis and the relev
 python src/phase4_evaluation.py
 ```
 
-(No arguments; reads Phase 3 results from the default path.)
+Reads Phase 3 results from `results/phase3_experiment_results.csv` by default. Optional: `--results-csv PATH`, `--bootstrap-n N`, `--no-latex-constants`.
 
 ---
 
@@ -112,7 +124,32 @@ python src/phase4_evaluation.py
 
 Then update this document (and Section 2.7 in the training doc) with the final numbers and whether H1–H3 are supported.
 
-## 3.4 Iteration notes
+## 3.4 PaC sensitivity sweep (how far does increasing PaC push Hybrid?)
+
+After Phase 3, `results/phase3_validation_scores.csv` holds the **same validation subset** used for hybrid tuning (ids, labels, raw `ml_confidence`, raw `pac_score`). The script `src/pac_sensitivity_sweep.py` **does not re-run Semgrep or CodeBERT**: it replays the fusion
+
+`hybrid = (1−β)·ML_norm + β·PaC_norm`
+
+for many values of **β** (and optional **pac_gain**), and for **each** (β, gain) pair it **re-tunes** `t_block` / `t_review` on the validation grid (same as Phase 3), then reports test metrics.
+
+| Output | Description |
+|--------|-------------|
+| `results/pac_sensitivity_sweep.csv` | One row per (pac_gain, beta): thresholds, val F1 used for tuning, test P/R/F1, AUC, ΔAUC vs ML. |
+| `results/pac_sensitivity_sweep.json` | Peaks: which β maximizes test Block F1 and which β maximizes ΔAUC, per pac_gain. |
+
+**Command (typical):**
+
+```bash
+python src/pac_sensitivity_sweep.py --steps 21 --pac-gains 1.0,1.5,2.0
+```
+
+- **β sweep:** shows whether Hybrid **F1** or **ΔAUC** keeps improving as PaC **weight** increases, or **plateaus** / reverses (e.g. PaC too noisy at high β).
+- **`pac_gain`:** multiplies **normalized** PaC before clipping to [0,1]. This **simulates** a stronger PaC channel (more violations / stronger signal) without re-running Semgrep. It is a **what-if** analysis, not a substitute for **real** rule expansion.
+- **Real “more PaC”:** add Semgrep rules / registries, **re-run Phase 3** (new `pac_score` columns), then run this sweep again or compare `pac_sensitivity_sweep.json` **across** Phase 3 runs.
+
+**Requirement:** If `phase3_validation_scores.csv` is missing (old Phase 3 run), **re-run** `python src/phase3_experiment.py` once so Phase 3 writes it.
+
+## 3.5 Iteration notes
 
 - After each full run, paste the key results (P/R/F1 per approach, McNemar p-values, AUCs, H1–H3) into this doc or into a short “Results” subsection.  
 - If you change the Block/Review thresholds or the Hybrid formula, document the change here and re-run Phase 3 and Phase 4.

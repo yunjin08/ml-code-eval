@@ -361,6 +361,19 @@ def main():
     val_pac_min, val_pac_max = float(np.min(val_pac)), float(np.max(val_pac))
     val_ml_n = _normalize_scores(val_ml, val_ml_min, val_ml_max)
     val_pac_n = _normalize_scores(val_pac, val_pac_min, val_pac_max)
+    # Save validation scores for post-hoc PaC weight sweeps (small file; see pac_sensitivity_sweep.py)
+    val_export_path = os.path.join(RESULTS_DIR, "phase3_validation_scores.csv")
+    val_export = pd.DataFrame(
+        {
+            "id": val_sub["id"].values,
+            "label": val_sub["label"].values,
+            "ml_confidence": val_ml,
+            "pac_score": val_pac,
+        }
+    )
+    val_export.to_csv(val_export_path, index=False)
+    print(f"Validation scores saved to {val_export_path} (for PaC sensitivity sweeps).")
+
     alpha, beta, t_block, t_review = tune_hybrid_on_val(
         val_ml_n, val_pac_n, val_sub["label"].values, min_pac_weight=args.min_pac_weight
     )
