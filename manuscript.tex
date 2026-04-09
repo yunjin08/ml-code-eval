@@ -17,7 +17,7 @@
 \usepackage{graphicx}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.17}
-\usepgfplotslibrary{fillbetween,groupplots}
+\usepgfplotslibrary{groupplots}
 \usepackage{tikz}
 \usetikzlibrary{positioning}
 \usepackage{booktabs}
@@ -31,10 +31,7 @@
 \usepackage{float}
 \usepackage{enumitem}
 \usepackage{fancyhdr}
-\usepackage{microtype}
 \usepackage{xcolor}
-\usepackage{url}
-\usepackage{afterpage}
 
 %,,, - spacing,,, -
 \doublespacing
@@ -496,9 +493,13 @@ To assess whether the observed advantage of the Hybrid continuous risk score ove
 
 To map how hybrid performance depends on the relative weight of PaC versus ML, a \textbf{post-hoc sweep} was conducted over $\beta \in [0,1]$ with $\alpha = 1 - \beta$ at fixed normalized scores (from the Phase~3 validation min--max statistics). For each $\beta$, Block and Review thresholds were re-tuned on the validation set to maximize Block F1 using the same grid as Phase~3. Test-set Block F1 and $\Delta\mathrm{AUC} = \mathrm{AUC}_{\mathrm{Hybrid}} - \mathrm{AUC}_{\mathrm{ML}}$ were then computed. Unless noted otherwise, the sweep uses \texttt{pac\_gain} $= 1.0$, i.e., the observed normalized PaC scores. Multiplying normalized PaC by a gain $g > 1$ before clipping to $[0,1]$ simulates a stronger PaC channel (e.g., richer rules) without re-running Semgrep; gains $\{1.5, 2.0\}$ were summarized alongside the default. This supplements the single Phase~3 configuration (including $\beta = \PacSensPhaseThreeBeta$ with $\beta \geq 0.20$) by tracing the response of F1 and $\Delta\mathrm{AUC}$ across $\beta$.
 
+\subsubsection{Cochran's Q Test and Post-hoc Pairwise Comparisons}
+
+To assess whether the three governance approaches produced \textit{statistically different} Block-decision patterns on the same test samples, \textbf{Cochran's Q test} \citep{cochran1950} was applied. Cochran's Q is the multi-category extension of McNemar's test for matched binary outcomes: it tests the null hypothesis $H_0$: the probability of a Block decision is equal across all three methods, using a $\chi^2$ approximation with $k-1 = 2$ degrees of freedom. A significant global Q warranted post-hoc pairwise \textbf{McNemar's tests} across all three method pairs (ML-Only vs.\ PaC-Only, ML-Only vs.\ Hybrid, PaC-Only vs.\ Hybrid) with \textbf{Bonferroni correction} ($\alpha_{\text{corr}} = 0.05/3 \approx 0.017$) to control the family-wise error rate. The odds ratio was reported for each pair to quantify the direction and magnitude of any difference.
+
 \subsection{Hypothesis Validation}
 
-Each formal hypothesis was directly evaluated through a structured comparison. H1 was evaluated by comparing the F1-scores for the ``Block'' decision across all three approaches, with statistical significance confirmed by McNemar's test. H2 was evaluated by comparing the Recall scores for ``Block'' between the Hybrid and PaC-Only approaches, with McNemar's test determining whether the difference was statistically significant. H3 was evaluated by comparing the Precision scores for ``Block'' between the Hybrid and ML-Only approaches, again with McNemar's test as the arbiter of significance.
+Each formal hypothesis was directly evaluated through a structured comparison. H1 was evaluated by comparing the F1-scores for the ``Block'' decision across all three approaches, with global significance confirmed by Cochran's Q and pairwise significance localised by McNemar's test. H2 was evaluated by comparing the Recall scores for ``Block'' between the Hybrid and PaC-Only approaches, with the corresponding post-hoc McNemar test determining whether the difference was statistically significant. H3 was evaluated by comparing the Precision scores for ``Block'' between the Hybrid and ML-Only approaches, again with McNemar's test as the arbiter of significance.
 
 % ============================================================
 \chapter{RESULTS AND DISCUSSION}
@@ -649,6 +650,30 @@ Figure~\ref{fig:block_metrics} visualizes the Block-decision precision, recall, 
 
 The Hybrid approach achieved a Block-decision F1-score of 0.186, identical to that of the ML-Only approach. Both substantially outperformed the PaC-Only approach (F1 = 0.056). The PaC-Only approach exhibited notably higher precision (0.206 vs.\ 0.127), confirming its capacity to generate high-confidence ``Block'' decisions when its rules fired; however, its very low recall (0.033) severely limited its coverage of the vulnerable population, resulting in a markedly inferior F1-score.
 
+\subsection{Cochran's Q Test and Post-hoc Pairwise Comparisons}
+
+Table~\ref{tab:cochransq} presents the results of Cochran's Q test and the three post-hoc McNemar pairwise comparisons (Bonferroni-corrected) applied to the Block decisions of all three governance approaches on the DiverseVul test set ($n = 33\,050$).
+
+\begin{table}[H]
+\centering
+\caption{Cochran's Q Global Test and Post-hoc Pairwise McNemar Tests for Block Decisions (Bonferroni $\alpha_{\text{corr}} = 0.017$)}
+\label{tab:cochransq}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Comparison} & \textbf{$n_{10}$} & \textbf{$n_{01}$} & \textbf{McNemar $\chi^2$} & \textbf{$p$-value} \\
+\midrule
+ML-Only vs.\ PaC-Only  & 5\,068 & 123   & 4708.75 & $< 0.001^{*}$ \\
+ML-Only vs.\ Hybrid    & 0      & 2     & 0.50    & 0.480 (n.s.) \\
+PaC-Only vs.\ Hybrid   & 123    & 5\,070 & 4710.75 & $< 0.001^{*}$ \\
+\bottomrule
+\multicolumn{5}{l}{\small Cochran's $Q(2) = 9421.50$, $p < 0.001$. Post-hoc Bonferroni $\alpha_{\text{corr}} \approx 0.017$.} \\
+\multicolumn{5}{l}{\small $n_{10}$: instances where only approach A blocks; $n_{01}$: only approach B blocks.} \\
+\multicolumn{5}{l}{\small $^{*}$: significant after Bonferroni correction; n.s.: not significant.} \\
+\end{tabular}
+\end{table}
+
+The Cochran's Q statistic of $Q(2) = 9421.50$ ($p < 0.001$) decisively rejects the null hypothesis that the three governance approaches produce equivalent Block-decision patterns. The post-hoc breakdown reveals where the differences lie. The ML-Only vs.\ PaC-Only comparison ($\chi^2 = 4708.75$, $p < 0.001$, OR $= 41.20$) and the PaC-Only vs.\ Hybrid comparison ($\chi^2 = 4710.75$, $p < 0.001$, OR $= 0.024$) are both highly significant after Bonferroni correction: ML-Only blocks 5\,068 samples that PaC-Only misses, while PaC-Only blocks only 123 samples that ML-Only misses. The ML-Only vs.\ Hybrid comparison ($\chi^2 = 0.50$, $p = 0.480$), by contrast, is not significant --- only 2 out of 33\,050 test instances received a different Block decision between the two approaches. Together, these results establish that (i) ML-Only and Hybrid are statistically indistinguishable in their Block decisions, (ii) both are overwhelmingly and significantly more aggressive blockers than PaC-Only, confirming the central role of the ML channel in driving Block coverage.
+
 \subsection{ROC-AUC Analysis}
 
 Table~\ref{tab:auc} presents the ROC-AUC values for the continuous risk scores produced by each approach.
@@ -704,22 +729,43 @@ Figure~\ref{fig:auc} shows ROC-style curves (TPR vs.\ FPR) for each approach, wi
     legend cell align=left,
     tick label style={font=\small},
 ]
-% X-axis (y=0) for fill-between
-\addplot[name path=axis, draw=none, domain=0:1] {0};
-% Define curves (area under curve = AUC via tpr = fpr^gamma, gamma = 1/AUC - 1)
-\addplot[name path=rocPac, draw=none, domain=0:1, samples=33] {x^0.814};
-\addplot[name path=rocMl, draw=none, domain=0:1, samples=33] {x^0.42};
-\addplot[name path=rocHybrid, draw=none, domain=0:1, samples=33] {x^0.41};
-% Shaded area under each curve (drawn first so curves show on top)
-\addplot[red!30, opacity=0.7, forget plot] fill between[of=rocPac and axis];
-\addplot[blue!30, opacity=0.7, forget plot] fill between[of=rocMl and axis];
-\addplot[green!30, opacity=0.7, forget plot] fill between[of=rocHybrid and axis];
-% Draw curves on top
-\addplot[red!70!black, thick, domain=0:1, samples=33] {x^0.814};
-\addplot[blue!70!black, thick, domain=0:1, samples=33] {x^0.42};
-\addplot[green!50!black, thick, domain=0:1, samples=33] {x^0.41};
+% Shaded areas (closed paths: curve → (1,0) → (0,0), fills area under curve)
+\addplot[red!30, fill opacity=0.7, draw=none] coordinates {
+(0.00,0.00000)(0.05,0.08729)(0.10,0.15346)(0.15,0.21347)(0.20,0.26980)
+(0.25,0.32354)(0.30,0.37530)(0.35,0.42547)(0.40,0.47433)(0.45,0.52205)
+(0.50,0.56880)(0.55,0.61469)(0.60,0.65980)(0.65,0.70423)(0.70,0.74801)
+(0.75,0.79122)(0.80,0.83390)(0.85,0.87609)(0.90,0.91781)(0.95,0.95911)
+(1.00,1.00000)(1.00,0.00000)(0.00,0.00000)};
+\addplot[blue!30, fill opacity=0.7, draw=none] coordinates {
+(0.00,0.00000)(0.05,0.28416)(0.10,0.38019)(0.15,0.45077)(0.20,0.50867)
+(0.25,0.55864)(0.30,0.60310)(0.35,0.64344)(0.40,0.68056)(0.45,0.71507)
+(0.50,0.74742)(0.55,0.77795)(0.60,0.80691)(0.65,0.83449)(0.70,0.86088)
+(0.75,0.88619)(0.80,0.91054)(0.85,0.93402)(0.90,0.95671)(0.95,0.97869)
+(1.00,1.00000)(1.00,0.00000)(0.00,0.00000)};
+\addplot[green!30, fill opacity=0.7, draw=none] coordinates {
+(0.00,0.00000)(0.05,0.29280)(0.10,0.38905)(0.15,0.45941)(0.20,0.51692)
+(0.25,0.56644)(0.30,0.61041)(0.35,0.65023)(0.40,0.68682)(0.45,0.72080)
+(0.50,0.75262)(0.55,0.78262)(0.60,0.81104)(0.65,0.83810)(0.70,0.86395)
+(0.75,0.88874)(0.80,0.91257)(0.85,0.93554)(0.90,0.95772)(0.95,0.97919)
+(1.00,1.00000)(1.00,0.00000)(0.00,0.00000)};
+% Curves on top (precomputed — no in-compile math evaluation)
+\addplot[red!70!black, thick] coordinates {
+(0.00,0.00000)(0.05,0.08729)(0.10,0.15346)(0.15,0.21347)(0.20,0.26980)
+(0.25,0.32354)(0.30,0.37530)(0.35,0.42547)(0.40,0.47433)(0.45,0.52205)
+(0.50,0.56880)(0.55,0.61469)(0.60,0.65980)(0.65,0.70423)(0.70,0.74801)
+(0.75,0.79122)(0.80,0.83390)(0.85,0.87609)(0.90,0.91781)(0.95,0.95911)(1.00,1.00000)};
+\addplot[blue!70!black, thick] coordinates {
+(0.00,0.00000)(0.05,0.28416)(0.10,0.38019)(0.15,0.45077)(0.20,0.50867)
+(0.25,0.55864)(0.30,0.60310)(0.35,0.64344)(0.40,0.68056)(0.45,0.71507)
+(0.50,0.74742)(0.55,0.77795)(0.60,0.80691)(0.65,0.83449)(0.70,0.86088)
+(0.75,0.88619)(0.80,0.91054)(0.85,0.93402)(0.90,0.95671)(0.95,0.97869)(1.00,1.00000)};
+\addplot[green!50!black, thick] coordinates {
+(0.00,0.00000)(0.05,0.29280)(0.10,0.38905)(0.15,0.45941)(0.20,0.51692)
+(0.25,0.56644)(0.30,0.61041)(0.35,0.65023)(0.40,0.68682)(0.45,0.72080)
+(0.50,0.75262)(0.55,0.78262)(0.60,0.81104)(0.65,0.83810)(0.70,0.86395)
+(0.75,0.88874)(0.80,0.91257)(0.85,0.93554)(0.90,0.95772)(0.95,0.97919)(1.00,1.00000)};
 % Diagonal: random (AUC = 0.5)
-\addplot[dashed, thick, gray] coordinates {(0,0) (1,1)};
+\addplot[dashed, thick, gray] coordinates {(0,0)(1,1)};
 \legend{PaC-Only (AUC=0.55), ML-Only (AUC=0.70), Hybrid (AUC=0.71), Random (AUC=0.5)}
 \end{axis}
 \end{tikzpicture}
