@@ -473,7 +473,7 @@ Both ML and PaC scores were normalized using minimum and maximum values computed
 
 This study employed a comparative experimental design. The independent variable was the governance approach (ML-Only, PaC-Only, Hybrid). The dependent variables were the precision, recall, and F1-score of governance decisions for the ``Block'' category against the validated ground truth from DiverseVul.
 
-For each governance approach, its final decision (``Block,'' ``Review,'' ``Approve'') was compared to the ground truth. Performance was measured using the following metrics: Precision (Block), which measured the fraction of blocked functions that were truly defective and thus quantified the false positive rate; Recall (Block), which measured the fraction of all truly defective functions that were blocked and thus quantified the false negative rate; and F1-score (Block), the harmonic mean of precision and recall, providing a single measure of overall ``Block'' decision quality that balanced both error types.
+For each governance approach, the \textbf{Block} decision was evaluated against the ground truth vulnerable/non-vulnerable label. The Review and Approve tiers serve operational triage roles but do not have a direct one-to-one correspondence with the binary vulnerable/non-vulnerable label; evaluating them as binary classifiers would misrepresent their function. The evaluation therefore focused exclusively on the Block decision, using the following metrics: Precision (Block), which measured the fraction of blocked functions that were truly defective and thus quantified the false positive rate; Recall (Block), which measured the fraction of all truly defective functions that were blocked and thus quantified the false negative rate; and F1-score (Block), the harmonic mean of precision and recall, providing a single measure of overall ``Block'' decision quality that balanced both error types.
 
 \subsection{Statistical Treatment}
 
@@ -496,6 +496,42 @@ To map how hybrid performance depends on the relative weight of PaC versus ML, a
 \subsubsection{Cochran's Q Test and Post-hoc Pairwise Comparisons}
 
 To assess whether the three governance approaches produced \textit{statistically different} Block-decision patterns on the same test samples, \textbf{Cochran's Q test} \citep{cochran1950} was applied. Cochran's Q is the multi-category extension of McNemar's test for matched binary outcomes: it tests the null hypothesis $H_0$: the probability of a Block decision is equal across all three methods, using a $\chi^2$ approximation with $k-1 = 2$ degrees of freedom. A significant global Q warranted post-hoc pairwise \textbf{McNemar's tests} across all three method pairs (ML-Only vs.\ PaC-Only, ML-Only vs.\ Hybrid, PaC-Only vs.\ Hybrid) with \textbf{Bonferroni correction} ($\alpha_{\text{corr}} = 0.05/3 \approx 0.017$) to control the family-wise error rate. The odds ratio was reported for each pair to quantify the direction and magnitude of any difference.
+
+\subsubsection{Cross-Validation Design and Parametric Statistical Inference}
+\label{sec:cv_design}
+
+The non-parametric tests described above (McNemar's test, Cochran's Q) require no distributional assumptions and operate on the full, undivided test set. However, they do not produce a sampling distribution of performance estimates across data partitions, which is necessary for parametric inference (ANOVA) and for characterising the fold-to-fold stability of each governance approach. To support this, the DiverseVul test set was subjected to a \textbf{10-fold stratified cross-validation} protocol. Stratification on the ground-truth label ensured that the approximately 5.8\% vulnerable class ratio was preserved in every fold, eliminating fold-to-fold class-imbalance as a confound.
+
+For each fold, the Block decision for each governance approach was evaluated against the ground-truth label using the same fixed models and thresholds derived in Phase~3 (no re-training occurred per fold). This yielded a $10 \times 3 \times 2$ observation matrix: 10 folds $\times$ 3 governance approaches $\times$ 2 outcome classes (Block, Unblock), where the cell value was the F1-score for that class in that fold. The per-fold Block F1 vectors ($n = 10$ per approach) served as the empirical sampling distribution for the three parametric assumption checks and the two-way ANOVA described below.
+
+\paragraph{Normality --- Shapiro--Wilk Test.}
+The \textbf{Shapiro--Wilk test} \citep{shapiro1965} was applied to the 10 per-fold Block F1 scores within each governance approach group. The Shapiro--Wilk test is the recommended normality diagnostic for small samples ($n < 50$): it tests $H_0$: the sample is drawn from a normal distribution, and its power is superior to the Kolmogorov--Smirnov test at the relevant sample size \citep{shapiro1965}. A $p$-value above $\alpha = 0.05$ indicates that normality is not rejected, satisfying the distributional prerequisite for ANOVA.
+
+\paragraph{Homogeneity of Variance --- Levene's Test.}
+The assumption of equal within-group variances (homoscedasticity) was verified using \textbf{Levene's test} \citep{levene1960}, applied jointly to the Block F1 vectors of all three governance approach groups. Levene's test was preferred over Bartlett's test because of its robustness to mild violations of normality, consistent with its established use as the ANOVA pre-check of choice \citep{levene1960}. The null hypothesis is $H_0$: $\sigma^2_{\text{ML}} = \sigma^2_{\text{PaC}} = \sigma^2_{\text{Hybrid}}$. Failure to reject at $\alpha = 0.05$ confirms that the homoscedasticity assumption for ANOVA is met.
+
+\paragraph{Two-Way ANOVA --- Randomized Complete Block Design.}
+The primary parametric test was a \textbf{two-way analysis of variance} under a \textit{randomized complete block design}, with the following factor structure:
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Treatment factor --- Governance Approach} (3 levels: ML-Only, PaC-Only, Hybrid): the primary factor of experimental interest.
+  \item \textbf{Blocking factor --- Fold} (10 levels, Folds 1--10): a nuisance factor incorporated to remove fold-to-fold variability in class composition from the error term, thereby increasing statistical power.
+  \item \textbf{Dependent variable}: per-fold Block F1-score.
+\end{itemize}
+
+The model is specified as:
+\begin{equation}
+Y_{ij} = \mu + \tau_i + \beta_j + \varepsilon_{ij}, \quad i \in \{1,2,3\},\; j \in \{1,\ldots,10\}
+\label{eq:anova_model}
+\end{equation}
+where $Y_{ij}$ is the Block F1-score for approach $i$ in fold $j$, $\mu$ is the grand mean, $\tau_i$ is the main effect of governance approach, $\beta_j$ is the blocking effect of fold, and $\varepsilon_{ij} \sim \mathcal{N}(0, \sigma^2)$ is the residual error term. Type~II sums of squares were computed so that each factor was adjusted for the other, avoiding the confounding that would arise from imbalanced marginal means. The null hypothesis for the treatment factor is:
+
+\begin{equation}
+H_0^{\text{Approach}}: \tau_1 = \tau_2 = \tau_3 = 0
+\label{eq:anova_h0}
+\end{equation}
+
+i.e., the mean Block F1 is equal across all three governance approaches after accounting for fold variation. Rejection of $H_0^{\text{Approach}}$ at $\alpha = 0.05$ indicates that governance approach has a statistically significant main effect on Block F1.
 
 \subsection{Hypothesis Validation}
 
@@ -600,6 +636,7 @@ This outcome confirmed the well-documented limitation of rule-based systems: the
 \section{Phase 4: Primary Evaluation Results}
 
 \subsection{Precision, Recall, and F1-Score}
+\label{sec:phase4_primary}
 
 Table~\ref{tab:primary_metrics} presents the precision, recall, and F1-score for the ``Block'' decision across all three governance approaches on the DiverseVul test set.
 
@@ -711,6 +748,15 @@ One-sided bootstrap proportion\protect\footnotemark & \PhaseFourBootstrapPOneSid
 \end{tabular}
 \end{table}
 \footnotetext{Fraction of bootstrap replicates with $\Delta_b \leq 0$ when $\hat{\Delta} > 0$. Values near zero indicate that non-positive differences under resampling are rare.}
+
+Figure~\ref{fig:bootstrap_ci_auc} shows the full empirical distribution of the $B = 5\,000$ bootstrap $\Delta\mathrm{AUC}$ replicates. The entire distribution is shifted to the right of zero, and the 95\% confidence interval (red shaded region) lies entirely above zero, confirming that the Hybrid's AUC advantage is not a sampling artefact.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/bootstrap_ci_auc.pdf}
+\caption{Bootstrap distribution of $\Delta\mathrm{AUC} = \mathrm{AUC}_{\mathrm{Hybrid}} - \mathrm{AUC}_{\mathrm{ML}}$ across $B = 5\,000$ resamples (seed~$= 42$). The \textbf{navy vertical line} is the point estimate ($\Delta\mathrm{AUC} = 0.0042$). The \textbf{red shaded region} is the 95\% percentile CI $[0.0014,\ 0.0070]$. The \textbf{dotted black line} marks zero. Because zero lies entirely outside the CI and to the left of the full distribution, the Hybrid AUC advantage over ML-Only is statistically distinguishable from sampling noise.}
+\label{fig:bootstrap_ci_auc}
+\end{figure}
 
 Figure~\ref{fig:auc} shows ROC-style curves (TPR vs.\ FPR) for each approach, with the \textbf{area under each curve} shaded; that area equals the reported AUC. The diagonal (dashed) is random guessing (AUC = 0.5); curves above it indicate better discrimination.
 
@@ -850,6 +896,216 @@ Hybrid vs.\ PaC-Only & $<$0.001 & 6.13 & [5.67, 6.63] \\
 \footnotetext[2]{For Hybrid vs.\ ML-Only there were only two discordant pairs (one where Hybrid was correct and ML-Only was not, one where the opposite held), so the odds ratio is $1/1 = 1.0$ and the 95\% CI is extremely wide. With only two discordant pairs, the test has negligible power and the effect size estimate is uninformative; the result should be interpreted as ``no detectable difference,'' not as evidence of equal performance.}
 
 The comparison between the Hybrid and PaC-Only approaches was highly statistically significant (p $<$ 0.001), with an odds ratio of 6.13 (95\% CI: 5.67--6.63), indicating that the Hybrid approach was approximately six times more likely to make a correct ``Block'' decision than the PaC-Only approach. In contrast, the comparison between the Hybrid and ML-Only approaches was not statistically significant (p = 0.157), with only two discordant pairs where one approach made a correct ``Block'' decision and the other did not. This finding indicated that, at the chosen thresholds, the Block decisions of the Hybrid and ML-Only approaches were nearly indistinguishable.
+
+\section{Cross-Validation and Parametric Statistical Analysis}
+
+\subsection{Ten-Fold Cross-Validation Block F1 Distributions}
+
+Table~\ref{tab:cv_block_f1} reports the per-fold Block F1-scores for all three governance approaches across the 10 stratified folds of the DiverseVul test set, together with the fold-level mean and standard deviation. The decisions applied per fold were derived from the fixed Phase~3 models and thresholds; no re-training occurred across folds. The table therefore characterises the \textit{stability} of Block-decision quality over test-set partitions, not model learning variability.
+
+\begin{table}[H]
+\centering
+\caption{Ten-Fold Stratified Cross-Validation: Per-Fold Block F1-Scores by Governance Approach}
+\label{tab:cv_block_f1}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Fold} & \textbf{ML-Only} & \textbf{PaC-Only} & \textbf{Hybrid} \\
+\midrule
+1  & 0.2005 & 0.0435 & 0.2005 \\
+2  & 0.1911 & 0.0444 & 0.1909 \\
+3  & 0.1846 & 0.0276 & 0.1846 \\
+4  & 0.2079 & 0.0731 & 0.2079 \\
+5  & 0.2182 & 0.1057 & 0.2182 \\
+6  & 0.1701 & 0.0699 & 0.1698 \\
+7  & 0.1495 & 0.0185 & 0.1495 \\
+8  & 0.1655 & 0.0270 & 0.1655 \\
+9  & 0.1871 & 0.0271 & 0.1871 \\
+10 & 0.1813 & 0.1212 & 0.1813 \\
+\midrule
+\textbf{Mean} & \textbf{0.1856} & \textbf{0.0558} & \textbf{0.1855} \\
+\textbf{SD}   & 0.0205 & 0.0356 & 0.0205 \\
+\bottomrule
+\multicolumn{4}{l}{\small Stratified 10-fold split of the 33,050-sample test set ($\approx$5.8\% vulnerable per fold).}\\
+\multicolumn{4}{l}{\small Fixed Phase~3 thresholds applied; no per-fold re-training.}\\
+\end{tabular}
+\end{table}
+
+Figure~\ref{fig:cv_lineplot} traces the Block F1-score per fold for each approach, making fold-to-fold variability and the persistent gap between PaC-Only and the other two approaches immediately visible. Figure~\ref{fig:cv_barchart} summarises the distribution as a grouped bar chart with $\pm 1$ standard deviation error bars.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.88\textwidth,
+  height=5.5cm,
+  xlabel={Fold},
+  ylabel={Block F1-Score},
+  xmin=0.5, xmax=10.5,
+  ymin=0, ymax=0.26,
+  xtick={1,2,3,4,5,6,7,8,9,10},
+  grid=major,
+  legend style={at={(0.5,-0.22)}, anchor=north, legend columns=3},
+  tick label style={font=\small},
+  label style={font=\small},
+  legend style={font=\small},
+]
+\addplot[blue!70!black, thick, mark=square*, mark size=2]
+  coordinates {(1,0.2005)(2,0.1911)(3,0.1846)(4,0.2079)(5,0.2182)(6,0.1701)(7,0.1495)(8,0.1655)(9,0.1871)(10,0.1813)};
+\addplot[red!70!black, thick, mark=triangle*, mark size=2]
+  coordinates {(1,0.0435)(2,0.0444)(3,0.0276)(4,0.0731)(5,0.1057)(6,0.0699)(7,0.0185)(8,0.0270)(9,0.0271)(10,0.1212)};
+\addplot[green!50!black, thick, mark=*, mark size=2]
+  coordinates {(1,0.2005)(2,0.1909)(3,0.1846)(4,0.2079)(5,0.2182)(6,0.1698)(7,0.1495)(8,0.1655)(9,0.1871)(10,0.1813)};
+\legend{ML-Only, PaC-Only, Hybrid}
+\end{axis}
+\end{tikzpicture}
+\caption{Block F1-score per fold (10-fold stratified cross-validation on the DiverseVul test set). ML-Only (blue squares) and Hybrid (green circles) track each other closely across all folds, while PaC-Only (red triangles) is consistently and substantially lower. Fold-to-fold variation is moderate for ML-Only and Hybrid (SD $\approx 0.021$) and larger for PaC-Only (SD $\approx 0.036$), reflecting PaC's greater sensitivity to which specific vulnerable functions fall in each partition.}
+\label{fig:cv_lineplot}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  ybar,
+  width=0.72\textwidth,
+  height=5.5cm,
+  bar width=0.4cm,
+  enlarge x limits=0.35,
+  symbolic x coords={ML-Only, PaC-Only, Hybrid},
+  xtick=data,
+  ymin=0, ymax=0.28,
+  ylabel={Mean Block F1 $\pm$ 1 SD},
+  ylabel style={font=\small},
+  tick label style={font=\small},
+  nodes near coords,
+  nodes near coords align={vertical},
+  every node near coord/.append style={font=\tiny, yshift=2pt},
+]
+% Mean bars
+\addplot[fill=blue!60, error bars/.cd, y dir=both, y explicit]
+  coordinates {
+    (ML-Only,  0.1856) +- (0, 0.0205)
+    (PaC-Only, 0.0558) +- (0, 0.0356)
+    (Hybrid,   0.1855) +- (0, 0.0205)
+  };
+\end{axis}
+\end{tikzpicture}
+\caption{Mean Block F1-score $\pm 1$ standard deviation across 10 folds for each governance approach. ML-Only and Hybrid are nearly identical (mean $\approx 0.186$, SD $\approx 0.021$); PaC-Only is substantially lower (mean $= 0.056$) and has higher variability (SD $= 0.036$).}
+\label{fig:cv_barchart}
+\end{figure}
+
+The results confirm the aggregate picture reported in Section~\ref{sec:phase4_primary}: across all 10 folds, ML-Only and Hybrid were nearly indistinguishable (mean difference in Block F1 $< 0.001$), while PaC-Only was consistently and substantially lower. The slightly higher variability of PaC-Only (SD = 0.036 vs.\ 0.021 for the other two) reflects its greater sensitivity to which specific vulnerable functions happen to fall within a given fold, since PaC rules fire on a sparse and uneven subset of the test population.
+
+\subsection{Shapiro--Wilk Normality Test}
+
+Table~\ref{tab:shapiro_wilk} reports the Shapiro--Wilk statistic and $p$-value for the per-fold Block F1 distributions of each governance approach ($n = 10$ per group).
+
+\begin{table}[H]
+\centering
+\caption{Shapiro--Wilk Normality Test Results for Per-Fold Block F1-Scores ($n = 10$ per group)}
+\label{tab:shapiro_wilk}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Governance Approach} & \textbf{Shapiro--Wilk $W$} & \textbf{$p$-value} & \textbf{Normal ($\alpha = 0.05$)?} \\
+\midrule
+ML-Only   & 0.9899 & 0.9967 & Yes \\
+PaC-Only  & 0.8765 & 0.1190 & Yes \\
+Hybrid    & 0.9893 & 0.9959 & Yes \\
+\bottomrule
+\multicolumn{4}{l}{\small $H_0$: data are drawn from a normal distribution. Failure to reject at $\alpha = 0.05$ supports normality.}\\
+\end{tabular}
+\end{table}
+
+All three groups failed to reject normality at $\alpha = 0.05$. ML-Only ($W = 0.990$, $p = 0.997$) and Hybrid ($W = 0.989$, $p = 0.996$) showed near-perfect normality, consistent with their stable, tightly distributed Block F1 scores across folds. PaC-Only returned a lower $W$ statistic ($W = 0.877$, $p = 0.119$), reflecting its greater fold-to-fold variability (SD = 0.036), yet the $p$-value remained well above 0.05, so normality was not rejected. The normality assumption for ANOVA was therefore satisfied across all three groups.
+
+\subsection{Levene's Test for Homogeneity of Variance}
+
+Levene's test yielded $F(2, 27) = 3.12$, $p = 0.060$. The null hypothesis of equal variances across the three governance approach groups was not rejected at $\alpha = 0.05$. Although PaC-Only exhibited higher dispersion than ML-Only or Hybrid (SD = 0.036 vs.\ 0.021), the difference was not statistically significant under Levene's criterion. The homoscedasticity assumption for two-way ANOVA was therefore satisfied, and the subsequent analysis proceeded under standard ANOVA assumptions without requiring a heteroscedasticity correction.
+
+\subsection{Two-Way ANOVA: Main Effect of Governance Approach}
+
+Table~\ref{tab:anova} presents the two-way ANOVA table (Type~II sums of squares) for the randomized complete block design described in Section~\ref{sec:cv_design}. Both assumption checks passed (normality: all $p > 0.05$; homoscedasticity: $p = 0.060$), validating the inferential interpretation of the ANOVA results.
+
+\begin{table}[H]
+\centering
+\caption{Two-Way ANOVA (Type~II SS): Block F1 $\sim$ Governance Approach + Fold}
+\label{tab:anova}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Source} & \textbf{Sum Sq.} & \textbf{$df$} & \textbf{$F$} & \textbf{$p$-value} \\
+\midrule
+Governance Approach & 0.1122 & 2  & 171.83 & $< 0.001^{***}$ \\
+Fold (block)        & 0.0131 & 9  &   4.45 & $0.003^{**}$ \\
+Residual            & 0.0059 & 18 &        & \\
+\bottomrule
+\multicolumn{5}{l}{\small $^{***}p < 0.001$; $^{**}p < 0.01$. Type~II SS; $n = 30$ observations (10 folds $\times$ 3 approaches).}\\
+\end{tabular}
+\end{table}
+
+The Governance Approach main effect was highly significant ($F(2, 18) = 171.83$, $p < 0.001$), decisively rejecting $H_0^{\text{Approach}}$ and confirming that the mean Block F1 differs across the three governance approaches even after the fold blocking effect is removed. This result is consistent with the non-parametric Cochran's Q result ($Q(2) = 9421.50$, $p < 0.001$, Table~\ref{tab:cochransq}) and provides convergent evidence from a parametric framework that governance approach is a statistically significant determinant of Block-decision quality.
+
+The Fold blocking effect was also significant ($F(9, 18) = 4.45$, $p = 0.003$), confirming that incorporating fold as a blocking factor was methodologically sound: fold-to-fold variation in the test partition contributed non-negligible variance that, had it been left in the error term, would have reduced statistical power. Including the fold block therefore made the test of the Governance Approach effect more sensitive, strengthening the inferential conclusion about approach differences.
+
+Figure~\ref{fig:cv_anova_summary} consolidates the ANOVA-relevant information in a single visualization, overlaying the per-fold observations on the group means with 95\% confidence intervals.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.82\textwidth,
+  height=5.5cm,
+  xlabel={Governance Approach},
+  ylabel={Block F1-Score},
+  xtick={1,2,3},
+  xticklabels={ML-Only, PaC-Only, Hybrid},
+  xmin=0.3, xmax=3.7,
+  ymin=0, ymax=0.28,
+  grid=major,
+  tick label style={font=\small},
+  label style={font=\small},
+]
+% Individual fold observations (jittered slightly)
+\addplot[only marks, mark=o, mark size=2.5, blue!50, opacity=0.8]
+  coordinates {
+    (0.85,0.2005)(0.88,0.1911)(0.91,0.1846)(0.94,0.2079)(0.97,0.2182)
+    (1.00,0.1701)(1.03,0.1495)(1.06,0.1655)(1.09,0.1871)(1.12,0.1813)
+  };
+\addplot[only marks, mark=o, mark size=2.5, red!50, opacity=0.8]
+  coordinates {
+    (1.85,0.0435)(1.88,0.0444)(1.91,0.0276)(1.94,0.0731)(1.97,0.1057)
+    (2.00,0.0699)(2.03,0.0185)(2.06,0.0270)(2.09,0.0271)(2.12,0.1212)
+  };
+\addplot[only marks, mark=o, mark size=2.5, green!60!black, opacity=0.8]
+  coordinates {
+    (2.85,0.2005)(2.88,0.1909)(2.91,0.1846)(2.94,0.2079)(2.97,0.2182)
+    (3.00,0.1698)(3.03,0.1495)(3.06,0.1655)(3.09,0.1871)(3.12,0.1813)
+  };
+% Group means (thick horizontal segments)
+\addplot[blue!80!black, very thick, mark=none]
+  coordinates {(0.80,0.1856)(1.18,0.1856)};
+\addplot[red!80!black, very thick, mark=none]
+  coordinates {(1.80,0.0558)(2.18,0.0558)};
+\addplot[green!40!black, very thick, mark=none]
+  coordinates {(2.80,0.1855)(3.18,0.1855)};
+% 95% CI bars  (mean ± 1.96*SD/sqrt(10))
+% CI half-width: 1.96*0.0205/sqrt(10)=0.0127; PaC: 1.96*0.0356/sqrt(10)=0.0220
+\addplot[blue!70!black, thick] coordinates {(0.99,0.1729)(0.99,0.1983)};
+\addplot[red!70!black,  thick] coordinates {(1.99,0.0338)(1.99,0.0778)};
+\addplot[green!40!black,thick] coordinates {(2.99,0.1728)(2.99,0.1982)};
+% CI tick marks
+\addplot[blue!70!black, thick] coordinates {(0.95,0.1729)(1.03,0.1729)};
+\addplot[blue!70!black, thick] coordinates {(0.95,0.1983)(1.03,0.1983)};
+\addplot[red!70!black,  thick] coordinates {(1.95,0.0338)(2.03,0.0338)};
+\addplot[red!70!black,  thick] coordinates {(1.95,0.0778)(2.03,0.0778)};
+\addplot[green!40!black,thick] coordinates {(2.95,0.1728)(3.03,0.1728)};
+\addplot[green!40!black,thick] coordinates {(2.95,0.1982)(3.03,0.1982)};
+\end{axis}
+\end{tikzpicture}
+\caption{Strip plot of per-fold Block F1 observations (circles) for each governance approach, overlaid with group means (horizontal lines) and 95\% confidence intervals (vertical bars, $\pm 1.96 \cdot \mathrm{SD}/\sqrt{10}$). The tight clustering of ML-Only and Hybrid observations around their common mean ($\approx 0.186$), contrasted with the lower, more dispersed PaC-Only observations (mean $= 0.056$), visually corroborates the ANOVA main effect ($F(2,18) = 171.83$, $p < 0.001$).}
+\label{fig:cv_anova_summary}
+\end{figure}
+
+Taken together, the cross-validation analysis, its assumption checks, and the two-way ANOVA provide a rigorous parametric complement to the non-parametric McNemar and Cochran's Q tests. All four inferential procedures---Cochran's Q, post-hoc McNemar, and two-way ANOVA (after Shapiro--Wilk and Levene's verification)---converge on the same substantive conclusion: governance approach is a highly significant determinant of Block-decision F1, with ML-Only and Hybrid statistically indistinguishable from each other and both significantly superior to PaC-Only.
 
 \section{Hypothesis Evaluation}
 
