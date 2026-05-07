@@ -6,7 +6,7 @@
 % ============================================================
 \documentclass[12pt, letterpaper]{report}
 
-%,,, - packages,,, -
+% --- packages ---
 \usepackage[margin=1in]{geometry}
 \usepackage{setspace}
 \usepackage{times}          % Times New Roman
@@ -33,17 +33,17 @@
 \usepackage{fancyhdr}
 \usepackage{xcolor}
 
-%,,, - spacing,,, -
+% --- spacing ---
 \doublespacing
 \setlength{\parindent}{0.5in}
 
-%,,, - hyperref setup,,, -
+% --- hyperref setup ---
 \hypersetup{
     colorlinks=false,
     pdfborder={0 0 0}
 }
 
-%,,, - chapter/section formatting,,, -
+% --- chapter/section formatting ---
 \titleformat{\chapter}[block]
   {\normalfont\bfseries\centering}
   {CHAPTER \thechapter}
@@ -64,7 +64,7 @@
   {\thesubsubsection}
   {1em}{}
 
-%,,, - header/footer,,, -
+% --- header/footer ---
 \pagestyle{plain}
 
 % Phase 4 bootstrap ΔAUC: regenerate with \texttt{python src/phase4\_evaluation.py}
@@ -75,14 +75,14 @@
 \begin{document}
 % ============================================================
 
-%, - Title Page, -
+% --- Title Page ---
 \begin{titlepage}
 \begin{center}
 \vspace*{0.5in}
 {\large\bfseries A Hybrid ML and Policy-as-Code Approach for Software Governance:\\
 An Empirical Evaluation of Vulnerability Detection}\\[1.5em]
 
-A Special Project Presented to the\\
+A Special Problem Presented to the\\
 Faculty of the Department of Computer Science,\\
 University of the Philippines Cebu\\
 In Partial Fulfillment\\
@@ -99,7 +99,7 @@ February 2026
 \end{center}
 \end{titlepage}
 
-%, - Permission Page, -
+% --- Permission Page ---
 \newpage
 \pagenumbering{roman}
 \setcounter{page}{2}
@@ -129,7 +129,7 @@ Student
 \noindent DHARRYL PRINCE ABELLANA\\
 Special Problem Adviser
 
-%, - Approval Sheet, -
+% --- Approval Sheet ---
 \newpage
 \thispagestyle{plain}
 This special problem entitled ``A Hybrid ML and Policy-as-Code Approach for Software Governance: An Empirical Evaluation of Vulnerability Detection'' prepared and submitted by JED EDISON J. DONAIRE is approved by:
@@ -148,7 +148,7 @@ Date
 \begin{minipage}{0.45\textwidth}
 \centering
 \rule{2.8in}{0.4pt}\\
-ASST. PROF. DHARYLL PRINCE M. ABELLANA\\
+ASST. PROF. DHARRYL PRINCE M. ABELLANA\\
 Chair, Department of Computer Science
 
 \vspace{0.5em}
@@ -168,7 +168,7 @@ Date
 \end{minipage}
 \end{center}
 
-%, - Acknowledgment, -
+% --- Acknowledgment ---
 \newpage
 \chapter*{ACKNOWLEDGMENT}
 \addcontentsline{toc}{chapter}{ACKNOWLEDGMENT}
@@ -190,19 +190,19 @@ Above all, I am grateful to God for granting the strength, wisdom, and persevera
 Jed Edison J. Donaire
 \end{flushright}
 
-%, - Abstract, -
+% --- Abstract ---
 \newpage
 \chapter*{ABSTRACT}
 \addcontentsline{toc}{chapter}{ABSTRACT}
 
-The rapid integration of Artificial Intelligence (AI) coding assistants into modern software development pipelines has intensified demands on software governance, the automated process of assessing code quality, security, and compliance. Existing frameworks, including DevSecOps pipelines, AI-augmented development tools, and Quality-Security Metrics (QSM) models, addressed these demands only in isolation, leaving critical detection, integration, and adaptivity gaps. This study designed, implemented, and empirically evaluated a Hybrid Governance framework that algorithmically combined the semantic analysis capability of a fine-tuned CodeBERT model with the rule-based enforcement power of a Semgrep Policy-as-Code (PaC) system for vulnerability detection in C/C++ source code.
+The rapid integration of Artificial Intelligence (AI) coding assistants into modern software development pipelines has intensified demands on software governance, the automated process of assessing code quality, security, and compliance. Existing frameworks, including DevSecOps pipelines, AI-augmented development tools, and Quality-Security Metrics (QSM) models, addressed these demands individually and without mutual integration, leaving critical detection, integration, and adaptivity gaps. This study designed, implemented, and empirically evaluated a Hybrid Governance framework that combined the semantic analysis capability of a fine-tuned CodeBERT model with the rule-based enforcement power of a Semgrep Policy-as-Code (PaC) system for vulnerability detection in C/C++ source code.
 
 The study followed a four-phase methodology: (1) dataset curation from the DiverseVul benchmark, (2) model training and selection, (3) a controlled governance experiment comparing ML-Only, PaC-Only, and Hybrid approaches, and (4) statistical evaluation using precision, recall, F1-score, McNemar's test, ROC-AUC analysis, and a paired bootstrap confidence interval for the Hybrid-minus-ML AUC difference. Results demonstrated that the Hybrid approach achieved a Block-decision F1-score of 0.186 and an AUC of 0.709, matching the ML-Only approach on classification metrics while substantially outperforming the PaC-Only approach (F1 = 0.056, AUC = 0.552). McNemar's test confirmed that the Hybrid approach was statistically significantly superior to PaC-Only (p \textless{} 0.001, OR = 6.13), whereas the difference between Hybrid and ML-Only was not statistically significant (p = 0.157). A paired bootstrap over the test set indicated that the small AUC advantage of Hybrid over ML-Only was statistically resolvable (95\% CI for $\Delta$AUC excluded zero) while remaining small in absolute terms. The findings indicated that in settings where PaC rule coverage is sparse relative to the vulnerability profile of the dataset, ML dominates the hybrid risk score; however, the hybrid architecture preserved the policy channel's capacity to contribute high-precision, low-recall signals and yielded a marginal AUC gain over ML-Only. The study concluded that the Hybrid framework represents a viable and extensible governance architecture, particularly for environments where PaC rule sets are continuously strengthened to match evolving vulnerability patterns.
 
 \vspace{1em}
 \noindent\textbf{Keywords:} Software Governance, Vulnerability Detection, CodeBERT, Policy-as-Code, Semgrep, Machine Learning, Hybrid Governance, DiverseVul, DevSecOps, Software Security
 
-%, - ToC, LoT, LoF, -
+% --- ToC, LoT, LoF ---
 \newpage
 \tableofcontents
 
@@ -219,7 +219,7 @@ The study followed a four-phase methodology: (1) dataset curation from the Diver
 
 \section{Rationale}
 
-The accelerating integration of Artificial Intelligence (AI) coding assistants into the software development lifecycle represented a paradigm shift, offering unprecedented gains in developer productivity \citep{google2023, github2023}. However, this shift concurrently exacerbated fundamental challenges in software governance, the systematic enforcement of code quality, security, and compliance. While established frameworks like DevSecOps pipelines, Quality-Security Metrics (QSM) models, and AI-augmented tools individually addressed aspects of this challenge, they operated in silos, creating a fragmented and reactive governance landscape \citep{zhang2023, gitlab2023}. This fragmentation proved critically insufficient to address the novel risks introduced by AI-generated code, including the propagation of subtle vulnerabilities, ``security drift'' over time, and the emergence of AI supply chain attacks \citep{pearce2022, taylor2023}.
+The accelerating integration of Artificial Intelligence (AI) coding assistants into the software development lifecycle represented a paradigm shift that offered unprecedented gains in developer productivity \citep{google2023, github2023}. However, this shift concurrently exacerbated fundamental challenges in software governance, the systematic enforcement of code quality, security, and compliance. While established frameworks like DevSecOps pipelines, Quality-Security Metrics (QSM) models, and AI-augmented tools individually addressed aspects of this challenge, they operated in silos, creating a fragmented and reactive governance landscape \citep{zhang2023, gitlab2023}. This fragmentation proved critically insufficient to address the novel risks introduced by AI-generated code, including the propagation of subtle vulnerabilities, ``security drift'' over time, and the emergence of AI supply chain attacks \citep{pearce2022, taylor2023}.
 
 Recent empirical studies reinforced this concern. \citet{pearce2022} found that approximately 30\% of GitHub Copilot-generated code snippets contained security vulnerabilities, while Microsoft's analysis of AI-assisted commits documented a 25\% increase in security-related technical debt in projects heavily reliant on AI coding assistants \citep{microsoft2023}. These findings underscored the urgency of developing governance frameworks that were not merely reactive to known vulnerability patterns but capable of detecting novel defects and enforcing policy compliance at scale.
 
@@ -242,7 +242,7 @@ These gaps collectively resulted in a governance framework that was reactive, in
 The primary objective of this research was to design and empirically evaluate a Hybrid Governance model that integrated ML and PaC to overcome the limitations of single-method approaches. This overarching objective was operationalized through the following specific aims:
 
 \begin{enumerate}[noitemsep]
-    \item To design a tunable Hybrid Governance framework that algorithmically combined the confidence score from a fine-tuned ML model (CodeBERT) with the normalized violation score from a PaC system (Semgrep).
+    \item To design a tunable Hybrid Governance framework that combined the confidence score from a fine-tuned ML model (CodeBERT) with the normalized violation score from a PaC system (Semgrep) through a weighted linear formula.
     \item To implement and benchmark three distinct governance approaches, ML-Only, PaC-Only, and the proposed Hybrid approach, on a curated subset of the DiverseVul dataset.
     \item To quantitatively evaluate and compare the performance of these approaches using precision, recall, and F1-score for the critical ``Block'' decision.
     \item To determine the statistical significance of any performance improvements offered by the Hybrid approach using McNemar's test and to quantify the effect size using odds ratios.
@@ -250,11 +250,11 @@ The primary objective of this research was to design and empirically evaluate a 
 
 \section{Significance of the Study}
 
-This research held significance for both academic research and industry practice.
+This research carried significance for both the scholarly community and industry practice.
 
-Regarding \textit{Theoretical Significance}, the study contributed to the body of knowledge by providing empirical evidence on the synergy between ML and symbolic AI in the context of software engineering. It sought to validate and extend theories of ensemble methods and unified governance by applying them to the pressing problem of securing AI-generated code, offering a validated model for future research in adaptive software assurance.
+In terms of \textit{theoretical significance}, the study contributed to the body of knowledge by providing empirical evidence on the synergy between ML and symbolic AI in the context of software engineering. It sought to validate and extend theories of ensemble methods and unified governance by applying them to the pressing problem of securing AI-generated code, offering a validated model for future research in adaptive software assurance.
 
-Regarding \textit{Practical Significance}, the research produced concrete contributions for several stakeholder groups. For software development organizations, it offered a data-driven blueprint for building more accurate and efficient governance pipelines. For tool developers and platform engineers, the findings provided clear guidance on the value of integrating multiple analysis techniques, informing the design of next-generation DevSecOps platforms. For compliance and security professionals, the study presented a pathway toward automated, evidence-based compliance, potentially reducing the manual audit burden and improving alignment with evolving regulatory standards such as the EU Cyber Resilience Act and the NIST Secure Software Development Framework.
+In terms of \textit{practical significance}, the research produced concrete contributions for several stakeholder groups. For software development organizations, it offered a data-driven blueprint for building more accurate and efficient governance pipelines. For tool developers and platform engineers, the findings provided clear guidance on the value of integrating multiple analysis techniques, informing the design of next-generation DevSecOps platforms. For compliance and security professionals, the study presented a pathway toward automated, evidence-based compliance, potentially reducing the manual audit burden and improving alignment with evolving regulatory standards such as the EU Cyber Resilience Act and the NIST Secure Software Development Framework.
 
 By rigorously testing a hybrid model, this work provided a foundational step toward the ultimate goal of fully adaptive, self-healing governance systems capable of keeping pace with the future of software development.
 
@@ -290,7 +290,7 @@ To ensure clarity and a shared understanding of the concepts discussed in this s
 
 \section{Primary Contributions of the Study}
 
-This study makes the following contributions to the fields of software security, governance automation, and applied machine learning.
+This study made the following contributions to the fields of software security, governance automation, and applied machine learning.
 
 \begin{enumerate}[noitemsep]
     \item \textbf{Formalization of Hybrid Governance as a Dual-Channel Risk Model.} The study introduced and formalized a unified framework that combined the semantic ML confidence signal from a fine-tuned CodeBERT model with the deterministic violation signal from a Semgrep Policy-as-Code system into a single, tunable risk score. This dual-channel architecture was formally specified as a weighted linear combination and empirically instantiated on a large-scale C/C++ vulnerability benchmark.
@@ -303,7 +303,7 @@ This study makes the following contributions to the fields of software security,
 
     \item \textbf{Post-hoc Sensitivity Analysis Linking PaC Weight to the $\Delta$AUC Ridge.} A systematic sweep over the PaC weight $\beta$ with per-$\beta$ validation threshold re-tuning revealed that the Phase~3 tuned weight ($\beta = 0.25$) coincided with the ridge of $\Delta\mathrm{AUC}$ across the sweep, while peak binary Block F1 occurred at higher $\beta$ (approximately 0.60--0.65). This analysis provided a principled characterization of the trade-off between threshold-tuned binary F1 and continuous ranking quality as PaC influence varies, offering practitioners a response surface for navigating this trade-off.
 
-    \item \textbf{A Reproducible Hybrid Governance Architecture and Evaluation Protocol for DevSecOps Pipelines.} The study produced a concrete, reproducible architecture, including dataset curation, CodeBERT fine-tuning, Semgrep integration, normalization procedures, weight optimization, and statistical evaluation,  that can serve as a reference design for integrating ML and rule-based systems in real-world CI/CD governance pipelines.
+    \item \textbf{A Reproducible Hybrid Governance Architecture and Evaluation Protocol for DevSecOps Pipelines.} The study produced a concrete, reproducible architecture, including dataset curation, CodeBERT fine-tuning, Semgrep integration, normalization procedures, weight optimization, and statistical evaluation, that can serve as a reference design for integrating ML and rule-based systems in real-world CI/CD governance pipelines.
 \end{enumerate}
 
 % ============================================================
@@ -312,7 +312,7 @@ This study makes the following contributions to the fields of software security,
 
 \section{Overview of Code Quality and Security}
 
-Code quality and security were foundational pillars of robust software development. Code quality encompassed attributes such as maintainability, readability, and efficiency, measured through metrics like technical debt, modularity, and adherence to coding standards \citep{hassan2023}. Conversely, code security prioritized the elimination of vulnerabilities, including zero-day exploits and AI-generated attack vectors \citep{nist2023, microsoft2023}. Though distinct, these concepts were deeply intertwined. Recent studies demonstrated that poor code quality exacerbated security risks: for example, systems with high technical debt were three to five times more likely to contain critical vulnerabilities due to rushed patches and legacy code \citep{allamanis2022}. Similarly, AI-powered static analysis tools showed that enforcing quality practices, such as cyclomatic complexity limits, reduced vulnerabilities by 50\% to 80\% \citep{zhang2023}. As \citet{mcgraw2022} asserted, secure software must first be good software, underscoring quality as a necessary, though insufficient, condition for security.
+Code quality and security were foundational pillars of robust software development. Code quality encompassed attributes such as maintainability, readability, and efficiency, measured through metrics like technical debt, modularity, and adherence to coding standards \citep{hassan2023}. Conversely, code security prioritized the elimination of vulnerabilities, including zero-day exploits and AI-generated attack vectors \citep{nist2023, microsoft2023}. Though distinct, these concepts were deeply intertwined. Recent studies demonstrated that poor code quality exacerbated security risks: for example, systems with high technical debt were three to five times more likely to contain critical vulnerabilities due to rushed patches and legacy code \citep{allamanis2022}. Similarly, AI-powered static analysis tools showed that enforcing quality practices, such as cyclomatic complexity limits, reduced vulnerabilities by 50\% to 80\% \citep{zhang2023}. As \citet{mcgraw2022} asserted, secure software must first be good software, underscoring quality as a necessary but insufficient condition for security.
 
 Disciplined coding practices were universally recognized as the foundation of high-quality software \citep{anderson2023}. These practices included refactoring, modular design, automated testing, and AI-assisted code reviews. \citet{fowler2023} emphasized that AI-driven refactoring tools reduced technical debt by 40\% to 60\% while mitigating security risks such as hardcoded credentials. Likewise, \citet{martin2022} advocated for microservices architectures to enhance readability and minimize supply-chain attacks. Empirical studies reinforced this link: LLM-based pair programming reduced defects by 25\% to 55\%, including OWASP Top 10 vulnerabilities \citep{hou2023}, while DevSecOps pipelines lowered defect density by 35\% to 40\% \citep{google2023}. Collectively, these practices created what \citet{mcconnell2022} termed ``adaptive code complete'' software that was self-documenting, audit-ready, and resilient to emerging threats.
 
@@ -356,9 +356,9 @@ Unified governance further demanded an architectural rethinking: instead of disp
 
 Adaptivity was the final critical dimension. Modern governance models needed to respond dynamically to evolving threats and changing regulations. \citet{zhang2023} proposed ``self-healing compliance systems'' that continuously retrained policy models using live telemetry and developer behavior feedback. Early pilots showed such systems reduced mean time to compliance by up to 55\% and eliminated 70\% of redundant human review cycles \citep{taylor2023}.
 
-In vulnerability detection specifically, \citet{chen2023} provided a widely cited benchmark using the DiverseVul dataset, evaluating CodeBERT and other models under combined-dataset and unseen-projects settings; they did not report results for DiverseVul-only training. The present study uses DiverseVul exclusively with a random train/validation/test split, positioning the work within the same benchmark lineage while focusing on single-dataset, within-distribution evaluation, so that direct numerical comparison with \citet{chen2023}'s reported CodeBERT metrics is not applicable.
+In vulnerability detection specifically, \citet{chen2023} provided a widely cited benchmark using the DiverseVul dataset, evaluating CodeBERT and other models under combined-dataset and unseen-projects settings; they did not report results for DiverseVul-only training. The present study used DiverseVul exclusively with a random train/validation/test split, positioning the work within the same benchmark lineage while focusing on single-dataset, within-distribution evaluation, such that direct numerical comparison with \citet{chen2023}'s reported CodeBERT metrics was not applicable.
 
-The literature converged on a unified, adaptive governance model as the necessary response to these challenges, yet a practical, empirically validated architecture for synthesizing machine learning intelligence with rule-based policy enforcement remained absent. This study directly addressed this absence by proposing a Hybrid ML-PaC Governance framework, which aimed to bridge these gaps through the algorithmic fusion of CodeBERT's semantic analysis and Semgrep's static checks into a single, tunable risk score, thereby translating the field's theoretical imperative into a concrete, testable system.
+The literature converged on a unified, adaptive governance model as the necessary response to these challenges, yet a practical, empirically validated architecture for synthesizing machine learning intelligence with rule-based policy enforcement remained absent. This study directly addressed this absence by proposing a Hybrid ML-PaC Governance framework, which sought to bridge these gaps through the principled fusion of CodeBERT's semantic analysis and Semgrep's static checks into a single, tunable risk score, thereby translating the field's theoretical imperative into a concrete, testable system.
 
 % ============================================================
 \chapter{METHODOLOGY}
@@ -366,7 +366,7 @@ The literature converged on a unified, adaptive governance model as the necessar
 
 \section{System Architecture Overview}
 
-This chapter presents the methodology used for designing, implementing, and evaluating the Hybrid ML-PaC Governance framework for vulnerability detection in C/C++ source code. The proposed system implemented a dual-channel analysis paradigm where Machine Learning (ML) and Policy-as-Code (PaC) methods operated in parallel before converging into a unified decision framework.
+This chapter describes the methodology employed in designing, implementing, and evaluating the Hybrid ML-PaC Governance framework for vulnerability detection in C/C++ source code. The proposed system implemented a dual-channel analysis paradigm where Machine Learning (ML) and Policy-as-Code (PaC) methods operated in parallel before converging into a unified decision framework.
 
 The architecture processed C/C++ source functions through two independent channels: an ML channel using fine-tuned CodeBERT and a PaC channel using Semgrep. These channels produced normalized risk scores that were combined through a weighted integration formula, Hybrid Risk = $\alpha \cdot C_{ML} + \beta \cdot V_{PaC}$, to generate a unified risk score. A threshold-based Decision Engine then categorized functions as BLOCK, REVIEW, or APPROVE based on their risk levels. Figure~\ref{fig:architecture} summarizes this flow.
 
@@ -406,11 +406,11 @@ The study tested the following three formal hypotheses:
 
 \subsection{DiverseVul Dataset Overview}
 
-To ensure a strong foundation and leverage a properly labeled, large-scale dataset, this study utilized DiverseVul \citep{chen2023}. DiverseVul is a comprehensive benchmark for vulnerability detection designed to address limitations in previous datasets. Its key characteristics made it ideally suited for this study.
+To ensure a strong foundation and leverage a properly labeled, large-scale dataset, this study used DiverseVul \citep{chen2023}. DiverseVul is a comprehensive benchmark for vulnerability detection designed to address limitations in previous datasets. Its key characteristics made it ideally suited for this study.
 
 In terms of scale and diversity, the dataset contained over 350,000 functions across multiple programming languages, including C/C++, drawn from a wide range of real-world GitHub projects. This scale and diversity helped mitigate bias and improved model generalizability. Regarding ground truth quality, the labels (vulnerable/non-vulnerable) were meticulously curated using a combination of sources, including commits linked to Common Vulnerabilities and Exposures (CVEs) and heuristic filtering, ensuring a reliable ground truth for evaluation. The dataset was also organized with a temporal split based on commit dates, preventing data leakage and simulating a realistic scenario where models were trained on past data and evaluated on future, unseen vulnerabilities.
 
-It is important to note that \citet{chen2023} evaluated CodeBERT and other models on DiverseVul combined with prior datasets (e.g., Devign, ReVeal, BigVul, CrossVul, CVEfixes) under both random-split and unseen-projects evaluation protocols; they do not report results for DiverseVul-only training in isolation. Because this study used DiverseVul exclusively and applied a random train/validation/test split over that single corpus, direct numerical comparison with the CodeBERT metrics reported by \citet{chen2023} is not possible. Nevertheless, the relative difficulty of the task, particularly the severe class imbalance and the diversity of vulnerability types, were consistent with their reported findings and informed the expectations set for model performance in this study.
+Notably, \citet{chen2023} evaluated CodeBERT and other models on DiverseVul combined with prior datasets (e.g., Devign, ReVeal, BigVul, CrossVul, CVEfixes) under both random-split and unseen-projects evaluation protocols; they did not report results for DiverseVul-only training in isolation. Because this study used DiverseVul exclusively and applied a random train/validation/test split over that single corpus, direct numerical comparison with the CodeBERT metrics reported by \citet{chen2023} is not possible. Nevertheless, the relative difficulty of the task, particularly the severe class imbalance and the diversity of vulnerability types, were consistent with their reported findings and informed the expectations set for model performance in this study.
 
 \subsection{Data Selection}
 
@@ -426,7 +426,7 @@ The Semgrep policy set was constructed based on the OWASP Top 10 and the Common 
 
 \subsection{CodeBERT: Model Selection and Rationale}
 
-This study selected CodeBERT \citep{feng2020} as its primary transformer-based model. CodeBERT is a bimodal pre-trained model developed by Microsoft for programming language and natural language tasks. It was trained on a large corpus of code (6.4 million functions across six languages, including C/C++) using a hybrid objective combining replaced token detection and standard masked language modeling. Its architecture is based on RoBERTa.
+The study selected CodeBERT \citep{feng2020} as the primary transformer-based model. CodeBERT is a bimodal pre-trained model developed by Microsoft for programming language and natural language tasks. It was trained on a large corpus of code (6.4 million functions across six languages, including C/C++) using a hybrid objective combining replaced token detection and standard masked language modeling. Its architecture is based on RoBERTa.
 
 The selection of CodeBERT over other transformer-based alternatives was driven by three key factors. First, it demonstrated state-of-the-art performance on fundamental code intelligence tasks, providing a robust general understanding of code syntax and semantics as a prerequisite for identifying subtle, semantically complex vulnerabilities. Second, it was directly applicable to sequence classification without requiring major architectural modifications or complex pre-processing such as the extraction of control or data flow graphs. Third, its base configuration (125M parameters) offered a favorable balance between performance and computational cost, making fine-tuning and inference feasible with standard GPU resources while ensuring reproducibility via availability on Hugging Face.
 
@@ -463,7 +463,7 @@ The hybrid risk score combined the ML confidence score and the normalized PaC vi
 \label{eq:hybrid}
 \end{equation}
 
-where $\alpha + \beta = 1$ and $\hat{C}_{ML}$, $\hat{V}_{PaC}$ denote the min-max normalized ML confidence and PaC violation scores, respectively. This formulation followed the established principle that ensemble methods combining heterogeneous signals can outperform individual approaches in defect prediction \citep{zhou2024}.
+where $\alpha + \beta = 1$ and $\hat{C}_{ML}$, $\hat{V}_{PaC}$ denote the min-max normalized ML confidence and PaC violation scores, respectively. This formulation followed the established principle that ensemble methods combining heterogeneous signals could outperform individual approaches in defect prediction \citep{zhou2024}.
 
 Both ML and PaC scores were normalized using minimum and maximum values computed exclusively from the validation set to prevent data leakage into the test evaluation. The weights $\alpha$ and $\beta$ were optimized on the validation set to maximize the F1-score of the resulting ``Block'' decision. When only the initial \texttt{p/c} registry was used, the PaC channel produced zero findings on the validation set, so the optimizer drove $\beta$ to zero and $\alpha$ to 1.0---i.e., the hybrid effectively collapsed to ML-Only ($\alpha = 1.00$, $\beta = 0.00$). Only after expanding the rule set to \texttt{p/cwe-top-25} and custom CWE rules did the PaC channel produce non-zero findings (on approximately 11\% of validation samples), allowing the optimizer to assign a non-zero weight to PaC. To prevent the optimizer from collapsing back to a de facto ML-Only approach when PaC signal remained sparse, a minimum PaC weight constraint was enforced ($\beta \geq 0.20$). Under the expanded rule set, the resulting tuned configuration was $\alpha = 0.75$, $\beta = 0.25$. This before/after contrast documents that increasing PaC rule coverage is necessary for the PaC channel to receive meaningful weight in the hybrid. Decision thresholds were set as follows: Block if Hybrid Risk $\geq 0.40$, Review Required if Hybrid Risk $\geq 0.10$, and Approve otherwise. These thresholds were also determined by analyzing the distribution of the Hybrid Risk Score on the validation set.
 
@@ -502,7 +502,7 @@ To assess whether the three governance approaches produced \textit{statistically
 
 The non-parametric tests described above (McNemar's test, Cochran's Q) require no distributional assumptions and operate on the full, undivided test set. However, they do not produce a sampling distribution of performance estimates across data partitions, which is necessary for parametric inference (ANOVA) and for characterising the fold-to-fold stability of each governance approach. To support this, the DiverseVul test set was subjected to a \textbf{10-fold stratified cross-validation} protocol. Stratification on the ground-truth label ensured that the approximately 5.8\% vulnerable class ratio was preserved in every fold, eliminating fold-to-fold class-imbalance as a confound.
 
-For each fold, the Block decision for each governance approach was evaluated against the ground-truth label using the same fixed models and thresholds derived in Phase~3 (no re-training occurred per fold). This yielded a $10 \times 3 \times 2$ observation matrix: 10 folds $\times$ 3 governance approaches $\times$ 2 outcome classes (Block, Unblock), where the cell value was the F1-score for that class in that fold. The per-fold Block F1 vectors ($n = 10$ per approach) served as the empirical sampling distribution for the three parametric assumption checks and the two-way ANOVA described below.
+For each fold, both Block and Unblock decisions for each governance approach were evaluated against the ground-truth label using the same fixed models and thresholds derived in Phase~3 (no re-training occurred per fold). This yielded a $10 \times 3 \times 2$ observation matrix: 10 folds $\times$ 3 governance approaches $\times$ 2 outcome classes (Block, Unblock), where the cell value was the F1-score for that class in that fold, for a total of 60 observations. The per-fold Block F1 vectors ($n = 10$ per approach) served as the empirical sampling distribution for the three parametric assumption checks (Shapiro--Wilk, Levene's, and ANOVA) described below; the full 60-observation dataset was used for the interaction ANOVA.
 
 \paragraph{Normality --- Shapiro--Wilk Test.}
 The \textbf{Shapiro--Wilk test} \citep{shapiro1965} was applied to the 10 per-fold Block F1 scores within each governance approach group. The Shapiro--Wilk test is the recommended normality diagnostic for small samples ($n < 50$): it tests $H_0$: the sample is drawn from a normal distribution, and its power is superior to the Kolmogorov--Smirnov test at the relevant sample size \citep{shapiro1965}. A $p$-value above $\alpha = 0.05$ indicates that normality is not rejected, satisfying the distributional prerequisite for ANOVA.
@@ -510,28 +510,30 @@ The \textbf{Shapiro--Wilk test} \citep{shapiro1965} was applied to the 10 per-fo
 \paragraph{Homogeneity of Variance --- Levene's Test.}
 The assumption of equal within-group variances (homoscedasticity) was verified using \textbf{Levene's test} \citep{levene1960}, applied jointly to the Block F1 vectors of all three governance approach groups. Levene's test was preferred over Bartlett's test because of its robustness to mild violations of normality, consistent with its established use as the ANOVA pre-check of choice \citep{levene1960}. The null hypothesis is $H_0$: $\sigma^2_{\text{ML}} = \sigma^2_{\text{PaC}} = \sigma^2_{\text{Hybrid}}$. Failure to reject at $\alpha = 0.05$ confirms that the homoscedasticity assumption for ANOVA is met.
 
-\paragraph{Two-Way ANOVA --- Randomized Complete Block Design.}
-The primary parametric test was a \textbf{two-way analysis of variance} under a \textit{randomized complete block design}, with the following factor structure:
+\paragraph{Two-Way ANOVA with Interaction --- Randomized Complete Block Design.}
+The primary parametric test was a \textbf{two-way analysis of variance with interaction} under a \textit{randomized complete block design}. To maximise analytical completeness, both Block and Unblock F1 scores were included as observations, yielding a total of 60 data points (10 folds $\times$ 3 approaches $\times$ 2 decision classes). The factor structure was:
 
 \begin{itemize}[noitemsep]
-  \item \textbf{Treatment factor --- Governance Approach} (3 levels: ML-Only, PaC-Only, Hybrid): the primary factor of experimental interest.
+  \item \textbf{Factor A --- Governance Approach} (3 levels: ML-Only, PaC-Only, Hybrid): the primary factor of experimental interest.
+  \item \textbf{Factor B --- Decision Class} (2 levels: Block, Unblock): included to test whether the relative performance of approaches varies across decision types.
+  \item \textbf{Approach $\times$ Decision interaction}: tests whether the Approach effect depends on which decision class is being evaluated.
   \item \textbf{Blocking factor --- Fold} (10 levels, Folds 1--10): a nuisance factor incorporated to remove fold-to-fold variability in class composition from the error term, thereby increasing statistical power.
-  \item \textbf{Dependent variable}: per-fold Block F1-score.
+  \item \textbf{Dependent variable}: per-fold F1-score (for the specified decision class).
 \end{itemize}
 
 The model is specified as:
 \begin{equation}
-Y_{ij} = \mu + \tau_i + \beta_j + \varepsilon_{ij}, \quad i \in \{1,2,3\},\; j \in \{1,\ldots,10\}
+Y_{ijk} = \mu + \tau_i + \delta_j + (\tau\delta)_{ij} + \beta_k + \varepsilon_{ijk}
 \label{eq:anova_model}
 \end{equation}
-where $Y_{ij}$ is the Block F1-score for approach $i$ in fold $j$, $\mu$ is the grand mean, $\tau_i$ is the main effect of governance approach, $\beta_j$ is the blocking effect of fold, and $\varepsilon_{ij} \sim \mathcal{N}(0, \sigma^2)$ is the residual error term. Type~II sums of squares were computed so that each factor was adjusted for the other, avoiding the confounding that would arise from imbalanced marginal means. The null hypothesis for the treatment factor is:
+where $Y_{ijk}$ is the F1-score for approach $i$, decision class $j$, and fold $k$; $\tau_i$ is the main effect of governance approach; $\delta_j$ is the main effect of decision class; $(\tau\delta)_{ij}$ is the Approach $\times$ Decision interaction; $\beta_k$ is the blocking effect of fold; and $\varepsilon_{ijk} \sim \mathcal{N}(0, \sigma^2)$ is the residual. Type~II sums of squares were computed so that each effect was adjusted for all others. The null hypothesis for the interaction term is:
 
 \begin{equation}
-H_0^{\text{Approach}}: \tau_1 = \tau_2 = \tau_3 = 0
-\label{eq:anova_h0}
+H_0^{\text{Interaction}}: (\tau\delta)_{ij} = 0 \; \forall\; i, j
+\label{eq:anova_interaction_h0}
 \end{equation}
 
-i.e., the mean Block F1 is equal across all three governance approaches after accounting for fold variation. Rejection of $H_0^{\text{Approach}}$ at $\alpha = 0.05$ indicates that governance approach has a statistically significant main effect on Block F1.
+Rejection of $H_0^{\text{Interaction}}$ at $\alpha = 0.05$ indicates that the governance approach's advantage is not uniform across Block and Unblock decisions --- i.e., the relative ranking of approaches depends on which decision class is under evaluation.
 
 \subsection{Hypothesis Validation}
 
@@ -545,9 +547,9 @@ Each formal hypothesis was directly evaluated through a structured comparison. H
 
 The fine-tuning of CodeBERT on the DiverseVul C/C++ training set produced a model that substantially outperformed the Random Forest and KNN baselines. On the validation set, CodeBERT achieved a precision of 0.128, recall of 0.361, and F1-score of 0.189 for the vulnerable class. The Random Forest classifier, relying solely on static code metrics from Lizard, achieved a precision of 0.044, recall of 0.017, and F1-score of 0.024; the KNN classifier on the same Lizard features achieved a precision of 0.187, recall of 0.033, and F1-score of 0.056. The substantially superior F1-score and recall of CodeBERT confirmed the value of pre-trained transformer-based representations over hand-crafted static metrics for vulnerability classification, aligning with prior findings that code-specific language models capture complex syntactic and semantic patterns that elude feature-engineering approaches \citep{feng2020, zhou2024}.
 
-The low absolute F1-score for both models reflected the significant class imbalance in the dataset, where vulnerable functions comprised approximately 6\% of the corpus. Despite the application of class weighting, the minority class remained challenging to classify with high precision. This finding is consistent with \citet{chen2023}: when CodeBERT was evaluated on \textit{unseen projects} (projects held out from training), F1 dropped to approximately 11\%, and the authors concluded that deep learning is not yet ready for deployment in vulnerability detection. Our validation F1 (0.189) under a random split thus sits within the range of moderate, task-inherent difficulty reported in that study. However, the recall achieved by CodeBERT was sufficient to validate its suitability as the ML channel for the governance experiment, particularly given the primacy of recall in a security-critical blocking context.
+The low absolute F1-score for both models reflected the significant class imbalance in the dataset, where vulnerable functions comprised approximately 6\% of the corpus. Despite the application of class weighting, the minority class remained challenging to classify with high precision. This finding is consistent with \citet{chen2023}: when CodeBERT was evaluated on \textit{unseen projects} (projects held out from training), F1 dropped to approximately 11\%, and the authors concluded that deep learning is not yet ready for deployment in vulnerability detection. The validation F1 of 0.189, obtained under a random split, was thus within the range of moderate, task-inherent difficulty reported in that study. However, the recall achieved by CodeBERT was sufficient to validate its suitability as the ML channel for the governance experiment, particularly given the primacy of recall in a security-critical blocking context.
 
-Evaluation in this study used a random split over the DiverseVul corpus, so that train and test samples were drawn from the same distribution. \citet{chen2023} do not report CodeBERT results for DiverseVul-only training; they report performance when training on combined datasets (e.g., Previous + DiverseVul) under a random split (F1 $\approx$ 38\%, precision $\approx$ 39\%) and under an unseen-projects holdout (F1 $\approx$ 12\%, precision $\approx$ 13\%). Because the present setup uses DiverseVul exclusively and a random split, results are not directly comparable; the validation F1 (0.189) and precision (0.128) reported here are consistent with single-dataset training and with \citet{chen2023}'s finding that deep learning-based vulnerability detection remains challenging. Figure~\ref{fig:phase2_validation} visualizes the comparison among CodeBERT, Random Forest, and KNN baselines on the validation set.
+Evaluation in this study used a random split over the DiverseVul corpus, so that train and test samples were drawn from the same distribution. \citet{chen2023} did not report CodeBERT results for DiverseVul-only training; they reported performance when training on combined datasets (e.g., Previous + DiverseVul) under a random split (F1 $\approx$ 38\%, precision $\approx$ 39\%) and under an unseen-projects holdout (F1 $\approx$ 12\%, precision $\approx$ 13\%). Because the present study used DiverseVul exclusively and a random split, results were not directly comparable; the validation F1 (0.189) and precision (0.128) reported here were consistent with single-dataset training and with \citet{chen2023}'s finding that deep learning-based vulnerability detection remained challenging. Figure~\ref{fig:phase2_validation} visualizes the comparison among CodeBERT, Random Forest, and KNN baselines on the validation set.
 
 \begin{figure}[H]
 \centering
@@ -689,6 +691,8 @@ The Hybrid approach achieved a Block-decision F1-score of 0.186, identical to th
 
 \subsection{Cochran's Q Test and Post-hoc Pairwise Comparisons}
 
+The primary metrics in Table~\ref{tab:primary_metrics} showed that Hybrid and ML-Only were numerically identical while PaC-Only lagged substantially. However, point metrics alone could not determine whether these differences were statistically real or a product of the particular test-set composition. To answer this \textit{globally} across all three approaches simultaneously on the same paired test samples---without inflating the Type~I error that would result from running multiple independent tests---Cochran's Q test was applied first, followed by Bonferroni-corrected post-hoc McNemar comparisons to localise which specific pairs drove any significant global effect.
+
 Table~\ref{tab:cochransq} presents the results of Cochran's Q test and the three post-hoc McNemar pairwise comparisons (Bonferroni-corrected) applied to the Block decisions of all three governance approaches on the DiverseVul test set ($n = 33\,050$).
 
 \begin{table}[H]
@@ -712,6 +716,8 @@ PaC-Only vs.\ Hybrid   & 123    & 5\,070 & 4710.75 & $< 0.001^{*}$ \\
 The Cochran's Q statistic of $Q(2) = 9421.50$ ($p < 0.001$) decisively rejects the null hypothesis that the three governance approaches produce equivalent Block-decision patterns. The post-hoc breakdown reveals where the differences lie. The ML-Only vs.\ PaC-Only comparison ($\chi^2 = 4708.75$, $p < 0.001$, OR $= 41.20$) and the PaC-Only vs.\ Hybrid comparison ($\chi^2 = 4710.75$, $p < 0.001$, OR $= 0.024$) are both highly significant after Bonferroni correction: ML-Only blocks 5\,068 samples that PaC-Only misses, while PaC-Only blocks only 123 samples that ML-Only misses. The ML-Only vs.\ Hybrid comparison ($\chi^2 = 0.50$, $p = 0.480$), by contrast, is not significant --- only 2 out of 33\,050 test instances received a different Block decision between the two approaches. Together, these results establish that (i) ML-Only and Hybrid are statistically indistinguishable in their Block decisions, (ii) both are overwhelmingly and significantly more aggressive blockers than PaC-Only, confirming the central role of the ML channel in driving Block coverage.
 
 \subsection{ROC-AUC Analysis}
+
+The binary Block decision metrics---precision, recall, F1---depended entirely on the fixed threshold chosen during Phase~3 validation. A governance system operating in production might adjust that threshold as operational priorities change. To assess performance \textit{independent of any single operating threshold}, the Receiver Operating Characteristic (ROC) curve and its Area Under the Curve (AUC) were computed for the continuous risk score of each approach. AUC measured how well each approach ranked vulnerable functions above non-vulnerable ones across all possible decision thresholds: a score of 0.5 represented random guessing, and 1.0 represented perfect ranking.
 
 Table~\ref{tab:auc} presents the ROC-AUC values for the continuous risk scores produced by each approach.
 
@@ -821,7 +827,9 @@ Figure~\ref{fig:auc} shows ROC-style curves (TPR vs.\ FPR) for each approach, wi
 
 The Hybrid approach achieved a marginally higher AUC (0.709) compared to the ML-Only approach (0.704), indicating a slight improvement in threshold-agnostic discriminatory power when the PaC signal was incorporated. The PaC-Only approach's AUC of 0.552 was barely above random chance, reflecting its very sparse signal on the DiverseVul test set. Critically, the AUC improvement of the Hybrid over ML-Only, while small in absolute terms ($\Delta\mathrm{AUC} \approx 0.004$), was supported by bootstrap inference on the paired test scores: the 95\% percentile interval for $\Delta\mathrm{AUC}$ excluded zero (Table~\ref{tab:auc_bootstrap}), so the ranking gain was statistically resolvable under case resampling even though it remained modest in magnitude. This distinction matters for interpretation: the continuous hybrid risk score ranked vulnerable functions slightly more accurately than the ML score alone across operating points, even though the tuned Block threshold left binary precision and F1 unchanged relative to ML-Only. For governance systems that use the risk score for prioritization, for example ordering a queue of code review tasks by severity, that improvement can shift ordering at the margin even when it is invisible at a single fixed Block threshold.
 
-\subsection{Bootstrap $\Delta$AUC and PaC weight sensitivity}
+\subsection{Bootstrap $\Delta$AUC and PaC Weight Sensitivity}
+
+The AUC table showed a small Hybrid advantage ($\Delta\mathrm{AUC} = 0.0042$), but a single point estimate could not distinguish a true signal from sampling variability. To determine whether this advantage was statistically resolvable, and to map how it changed as the PaC weight $\beta$ varied, two analyses were conducted: a paired bootstrap confidence interval on the Phase~3 operating point, and a post-hoc sweep over $\beta$.
 
 The point estimate and bootstrap interval for $\Delta\mathrm{AUC}$ in Table~\ref{tab:auc_bootstrap} correspond to the \textit{single} hybrid risk vector produced by Phase~3 ($\alpha = 0.75$, $\beta = 0.25$ on normalized scores). To examine whether that operating point sits near the ridge of the hybrid response surface, a post-hoc $\beta$ sweep was evaluated as described in the Methodology.
 
@@ -877,6 +885,8 @@ Table~\ref{tab:pac_gain_peaks} reports peaks under scaled PaC (\texttt{pac\_gain
 
 \subsection{McNemar's Test and Effect Size}
 
+While Cochran's Q established the global significance of approach differences and ROC-AUC assessed threshold-agnostic ranking quality, neither directly quantified how much more often one specific approach made a \textit{correct} Block decision than another. McNemar's test addressed this by examining discordant pairs---test instances where one approach was correct and the other was not---and computing an odds ratio that expressed the magnitude of any directional advantage.
+
 Table~\ref{tab:mcnemar} presents the results of McNemar's tests comparing the Hybrid approach against each single-method baseline.
 
 \begin{table}[H]
@@ -899,9 +909,11 @@ The comparison between the Hybrid and PaC-Only approaches was highly statistical
 
 \section{Cross-Validation and Parametric Statistical Analysis}
 
+The non-parametric tests presented thus far (Cochran's Q and McNemar's test) operated on the full, undivided test set and required no distributional assumptions. Their limitation was that they did not produce a sampling distribution of performance estimates across data partitions, which was necessary for parametric inference (ANOVA) and for characterising fold-to-fold stability. To address this, the analysis proceeded through a sequence of three steps: (1) 10-fold stratified cross-validation to generate per-fold performance observations; (2) assumption checks (Shapiro--Wilk normality test and Levene's test for homogeneity of variance) to validate the inferential preconditions for ANOVA; and (3) a two-way ANOVA with interaction to formally test the joint effects of governance approach and decision class on F1 performance. Each step built on the previous one in a principled progression from descriptive to inferential.
+
 \subsection{Ten-Fold Cross-Validation Block F1 Distributions}
 
-Table~\ref{tab:cv_block_f1} reports the per-fold Block F1-scores for all three governance approaches across the 10 stratified folds of the DiverseVul test set, together with the fold-level mean and standard deviation. The decisions applied per fold were derived from the fixed Phase~3 models and thresholds; no re-training occurred across folds. The table therefore characterises the \textit{stability} of Block-decision quality over test-set partitions, not model learning variability.
+Table~\ref{tab:cv_block_f1} reports the per-fold Block F1-scores for all three governance approaches across the 10 stratified folds of the DiverseVul test set, together with the fold-level mean and standard deviation. The decisions applied per fold were derived from the fixed Phase~3 models and thresholds; no re-training occurred across folds. The table therefore characterised the \textit{stability} of Block-decision quality over test-set partitions, not model learning variability.
 
 \begin{table}[H]
 \centering
@@ -998,6 +1010,8 @@ The results confirm the aggregate picture reported in Section~\ref{sec:phase4_pr
 
 \subsection{Shapiro--Wilk Normality Test}
 
+Before applying ANOVA, which assumes that the dependent variable is approximately normally distributed within each group, the Shapiro--Wilk test was applied to the 10 per-fold Block F1 scores for each governance approach. Shapiro--Wilk was chosen over the Kolmogorov--Smirnov test because of its superior statistical power at small sample sizes ($n = 10$). The null hypothesis was that the data were drawn from a normal distribution; failing to reject at $\alpha = 0.05$ satisfied the ANOVA prerequisite.
+
 Table~\ref{tab:shapiro_wilk} reports the Shapiro--Wilk statistic and $p$-value for the per-fold Block F1 distributions of each governance approach ($n = 10$ per group).
 
 \begin{table}[H]
@@ -1020,33 +1034,43 @@ All three groups failed to reject normality at $\alpha = 0.05$. ML-Only ($W = 0.
 
 \subsection{Levene's Test for Homogeneity of Variance}
 
+With normality confirmed, the second prerequisite for ANOVA---homogeneity of variance (homoscedasticity) across groups---was verified using Levene's test. Levene's test was preferred over Bartlett's test because of its robustness to mild deviations from normality at small sample sizes. The null hypothesis was that the variance of Block F1 scores was equal across all three governance approach groups; failing to reject at $\alpha = 0.05$ validated proceeding with standard ANOVA under the equal-variance assumption.
+
 Levene's test yielded $F(2, 27) = 3.12$, $p = 0.060$. The null hypothesis of equal variances across the three governance approach groups was not rejected at $\alpha = 0.05$. Although PaC-Only exhibited higher dispersion than ML-Only or Hybrid (SD = 0.036 vs.\ 0.021), the difference was not statistically significant under Levene's criterion. The homoscedasticity assumption for two-way ANOVA was therefore satisfied, and the subsequent analysis proceeded under standard ANOVA assumptions without requiring a heteroscedasticity correction.
 
-\subsection{Two-Way ANOVA: Main Effect of Governance Approach}
+\subsection{Two-Way ANOVA with Interaction: Approach, Decision Class, and Their Joint Effect}
 
-Table~\ref{tab:anova} presents the two-way ANOVA table (Type~II sums of squares) for the randomized complete block design described in Section~\ref{sec:cv_design}. Both assumption checks passed (normality: all $p > 0.05$; homoscedasticity: $p = 0.060$), validating the inferential interpretation of the ANOVA results.
+Having confirmed that normality and homoscedasticity assumptions were met, the two-way ANOVA with interaction was fitted to the full 60-observation dataset (10 folds $\times$ 3 approaches $\times$ 2 decision classes). This design went beyond asking simply ``does approach matter?''\ by also asking whether the relative advantage of each approach was \textit{consistent} across Block and Unblock outcomes. Table~\ref{tab:anova} presents the results.
 
 \begin{table}[H]
 \centering
-\caption{Two-Way ANOVA (Type~II SS): Block F1 $\sim$ Governance Approach + Fold}
+\caption{Two-Way ANOVA with Interaction (Type~II SS): F1 $\sim$ Approach $\times$ Decision + Fold}
 \label{tab:anova}
 \begin{tabular}{lrrrr}
 \toprule
 \textbf{Source} & \textbf{Sum Sq.} & \textbf{$df$} & \textbf{$F$} & \textbf{$p$-value} \\
 \midrule
-Governance Approach & 0.1122 & 2  & 171.83 & $< 0.001^{***}$ \\
-Fold (block)        & 0.0131 & 9  &   4.45 & $0.003^{**}$ \\
-Residual            & 0.0059 & 18 &        & \\
+Governance Approach      & 0.0135 & 2  &  24.04 & $< 0.001^{***}$ \\
+Decision Class           & 9.1380 & 1  & 32\,599.22 & $< 0.001^{***}$ \\
+Approach $\times$ Decision & 0.1280 & 2  & 228.24 & $< 0.001^{***}$ \\
+Fold (block)             & 0.0065 & 9  &   2.58 & $0.017^{*}$ \\
+Residual                 & 0.0126 & 45 &        & \\
 \bottomrule
-\multicolumn{5}{l}{\small $^{***}p < 0.001$; $^{**}p < 0.01$. Type~II SS; $n = 30$ observations (10 folds $\times$ 3 approaches).}\\
+\multicolumn{5}{l}{\small $^{***}p < 0.001$; $^{*}p < 0.05$. Type~II SS; $n = 60$ observations (10 folds $\times$ 3 approaches $\times$ 2 decision classes).}\\
 \end{tabular}
 \end{table}
 
-The Governance Approach main effect was highly significant ($F(2, 18) = 171.83$, $p < 0.001$), decisively rejecting $H_0^{\text{Approach}}$ and confirming that the mean Block F1 differs across the three governance approaches even after the fold blocking effect is removed. This result is consistent with the non-parametric Cochran's Q result ($Q(2) = 9421.50$, $p < 0.001$, Table~\ref{tab:cochransq}) and provides convergent evidence from a parametric framework that governance approach is a statistically significant determinant of Block-decision quality.
+Three findings emerged from this analysis, each answering a distinct question.
 
-The Fold blocking effect was also significant ($F(9, 18) = 4.45$, $p = 0.003$), confirming that incorporating fold as a blocking factor was methodologically sound: fold-to-fold variation in the test partition contributed non-negligible variance that, had it been left in the error term, would have reduced statistical power. Including the fold block therefore made the test of the Governance Approach effect more sensitive, strengthening the inferential conclusion about approach differences.
+First, the Governance Approach main effect was significant ($F(2, 45) = 24.04$, $p < 0.001$), confirming that the three approaches differed in overall F1 performance even after accounting for decision class and fold variation. This result converged with the non-parametric Cochran's Q ($Q(2) = 9421.50$, $p < 0.001$, Table~\ref{tab:cochransq}), providing corroborating parametric evidence that governance approach was a statistically meaningful determinant of classification quality.
 
-Figure~\ref{fig:cv_anova_summary} consolidates the ANOVA-relevant information in a single visualization, overlaying the per-fold observations on the group means with 95\% confidence intervals.
+Second, the Decision Class main effect was extraordinarily large ($F(1, 45) = 32{,}599.22$, $p < 0.001$), reflecting the well-known structural asymmetry of vulnerability detection: Block decisions (minority-class identification) are inherently far harder than Unblock decisions (majority-class identification), so the two decision classes have vastly different F1 baselines. This effect was expected and served primarily as a verification that the model correctly partitioned the variance.
+
+Third, and most substantively, the Approach $\times$ Decision interaction was highly significant ($F(2, 45) = 228.24$, $p < 0.001$). This interaction carried a specific interpretive message: the \textit{relative ranking} of the three governance approaches was not the same for Block decisions as it was for Unblock decisions. Concretely, PaC-Only's comparative deficit was largest on Block decisions (where its low recall dominated; mean Block F1 $= 0.056$) and was reversed on Unblock decisions, where its high specificity produced mean Unblock F1 $= 0.967$, modestly higher than ML-Only and Hybrid ($\approx 0.901$). ML-Only and Hybrid were nearly indistinguishable on both decision classes, consistent with the McNemar result (only 2 discordant pairs). This interaction validated the complementary error profiles described qualitatively in the Discussion: PaC was a high-precision, low-recall approach whose advantage manifested specifically on negative (non-Block) classifications, not on the detection of true defects.
+
+The Fold blocking effect reached significance ($F(9, 45) = 2.58$, $p = 0.017$), confirming that removing fold-to-fold variability from the error term was methodologically justified. Without the fold block, the residual variance would have been inflated, reducing the sensitivity of the Approach and interaction tests.
+
+Figure~\ref{fig:cv_anova_summary} consolidates the ANOVA-relevant information for the Block decision class in a single visualization, overlaying the per-fold observations on the group means with 95\% confidence intervals. The figure made the Approach $\times$ Decision interaction tangible: the tight clustering of ML-Only and Hybrid observations around a common mean contrasted sharply with the lower, more dispersed PaC-Only observations, while PaC-Only's high-specificity advantage on Unblock decisions (not shown in this figure) constituted the other half of the interaction pattern.
 
 \begin{figure}[H]
 \centering
@@ -1101,11 +1125,11 @@ Figure~\ref{fig:cv_anova_summary} consolidates the ANOVA-relevant information in
 \addplot[green!40!black,thick] coordinates {(2.95,0.1982)(3.03,0.1982)};
 \end{axis}
 \end{tikzpicture}
-\caption{Strip plot of per-fold Block F1 observations (circles) for each governance approach, overlaid with group means (horizontal lines) and 95\% confidence intervals (vertical bars, $\pm 1.96 \cdot \mathrm{SD}/\sqrt{10}$). The tight clustering of ML-Only and Hybrid observations around their common mean ($\approx 0.186$), contrasted with the lower, more dispersed PaC-Only observations (mean $= 0.056$), visually corroborates the ANOVA main effect ($F(2,18) = 171.83$, $p < 0.001$).}
+\caption{Strip plot of per-fold Block F1 observations (circles) for each governance approach, overlaid with group means (horizontal lines) and 95\% confidence intervals (vertical bars, $\pm 1.96 \cdot \mathrm{SD}/\sqrt{10}$). The tight clustering of ML-Only and Hybrid observations around their common mean ($\approx 0.186$), contrasted with the lower, more dispersed PaC-Only observations (mean $= 0.056$), visually corroborates the ANOVA Approach main effect ($F(2, 45) = 24.04$, $p < 0.001$) and the Approach $\times$ Decision interaction ($F(2, 45) = 228.24$, $p < 0.001$).}
 \label{fig:cv_anova_summary}
 \end{figure}
 
-Taken together, the cross-validation analysis, its assumption checks, and the two-way ANOVA provide a rigorous parametric complement to the non-parametric McNemar and Cochran's Q tests. All four inferential procedures---Cochran's Q, post-hoc McNemar, and two-way ANOVA (after Shapiro--Wilk and Levene's verification)---converge on the same substantive conclusion: governance approach is a highly significant determinant of Block-decision F1, with ML-Only and Hybrid statistically indistinguishable from each other and both significantly superior to PaC-Only.
+Taken together, the cross-validation analysis, its assumption checks, and the two-way ANOVA with interaction provided a rigorous parametric complement to the non-parametric McNemar and Cochran's Q tests. All four inferential procedures---Cochran's Q, post-hoc McNemar, and two-way ANOVA with interaction (after Shapiro--Wilk and Levene's verification)---converged on the same substantive conclusion: governance approach was a highly significant determinant of F1, with ML-Only and Hybrid statistically indistinguishable from each other across both decision classes. Crucially, the significant Approach $\times$ Decision interaction ($F(2, 45) = 228.24$, $p < 0.001$) revealed that PaC-Only's deficit was concentrated on Block decisions (low recall), while its high-specificity profile gave it a modest Unblock F1 advantage. This interaction enriched the interpretation beyond a simple ranking: it confirmed that the three approaches were not uniformly ordered across all evaluation criteria, with PaC-Only occupying a complementary niche of high precision on the decisions it made, even as ML-Only and Hybrid dominated on recall-driven Block-decision coverage.
 
 \section{Hypothesis Evaluation}
 
@@ -1123,7 +1147,7 @@ H3 posited that the Hybrid approach would demonstrate higher Precision for criti
 
 However, the hypothesis was not rejected on all dimensions. The continuous Hybrid risk score achieved a marginally higher ROC-AUC (0.709) compared to the ML-Only score (0.704), indicating that the fusion of the PaC signal did add a small amount of discriminatory information when the score was treated as a continuous ranking rather than a single binary decision. Paired bootstrap inference on $\Delta\mathrm{AUC}$ (Table~\ref{tab:auc_bootstrap}) further indicated that this advantage was statistically resolvable under case resampling (95\% CI excluding zero), while remaining small in absolute terms. This distinction is important: at a \textit{fixed} Block threshold of 0.40, the sparse PaC signal (non-zero on only $\approx$11\% of test functions) was insufficient to alter the Block/Approve boundary for any function that was not already on that boundary due to the ML score alone, leaving precision unchanged. However, across \textit{all possible thresholds}, as reflected by the AUC, the hybrid score ranked vulnerable functions marginally better than the ML score alone.
 
-The mechanism by which H3 was expected to operate,  PaC reducing false positives by providing a high-precision filter,  was structurally present in the framework, but was constrained by PaC's low recall (0.033) and sparse coverage. In theory, if the PaC channel fires on a false positive that the ML model assigns a high confidence score, adding a PaC score of zero to that function's hybrid risk would lower it below the Block threshold, thereby reducing false positives and improving precision. This mechanism could only produce a measurable precision gain when PaC coverage was high enough to fire on a meaningful fraction of the ML model's false positives. With only 11\% of test functions receiving any PaC findings, that condition was not met in this evaluation. H3 therefore remained an architecturally sound hypothesis whose empirical validation required a higher-coverage PaC rule set than was achievable on the DiverseVul function-level corpus with the current configuration.
+The mechanism by which H3 was expected to operate---PaC reducing false positives by providing a high-precision filter---was structurally present in the framework, but was constrained by PaC's low recall (0.033) and sparse coverage. In theory, if the PaC channel fired on a false positive that the ML model assigned a high confidence score, adding a PaC score of zero to that function's hybrid risk would lower it below the Block threshold, thereby reducing false positives and improving precision. This mechanism could only produce a measurable precision gain when PaC coverage was high enough to fire on a meaningful fraction of the ML model's false positives. With only 11\% of test functions receiving any PaC findings, that condition was not met in this evaluation. H3 therefore remained an architecturally sound hypothesis whose empirical validation required a higher-coverage PaC rule set than was achievable on the DiverseVul function-level corpus with the current configuration.
 
 \section{Error Analysis}
 
@@ -1217,11 +1241,11 @@ The following limitations circumscribed the scope and generalizability of this s
 
 \textbf{Limitation 1: Function-Level Evaluation Constrains PaC Effectiveness.} The entire evaluation was conducted on isolated function-level code snippets extracted from DiverseVul. PaC systems such as Semgrep are designed to analyze code within its structural context, including header files, macro definitions, cross-function call sites, and inter-file dependencies. By operating on function snippets stripped of this context, the evaluation systematically reduced PaC's ability to fire on patterns that are detectable at file or repository granularity. The PaC recall of 0.033 should therefore be interpreted as a lower bound on PaC effectiveness in end-to-end governance deployments, not as a representative ceiling. Organizations evaluating PaC for production use should not generalize from this figure without conducting a parallel evaluation on file-level or repository-level corpora.
 
-\textbf{Limitation 2: Random Split May Overestimate Within-Distribution Generalization.} The train, validation, and test sets were formed by a random split over the DiverseVul corpus. As a consequence, the evaluation measured within-distribution generalization, where test samples were drawn from the same projects and time periods as training samples. This is known to overestimate performance relative to cross-project or temporal holdout evaluation protocols. \citet{chen2023} reported that CodeBERT's F1 dropped from approximately 38\% (random split, combined datasets) to approximately 11\% (unseen-projects protocol), a delta that illustrates how substantially random-split metrics can diverge from realistic deployment performance. The metrics reported in this study, including the Hybrid Block-decision F1 of 0.186, were likely optimistic relative to what would be observed under a project-level holdout.
+\textbf{Limitation 2: Random Split May Overestimate Within-Distribution Generalization.} The train, validation, and test sets were formed by a random split over the DiverseVul corpus. As a consequence, the evaluation measured within-distribution generalization, where test samples were drawn from the same projects and time periods as training samples. This approach was known to overestimate performance relative to cross-project or temporal holdout evaluation protocols. \citet{chen2023} reported that CodeBERT's F1 dropped from approximately 38\% (random split, combined datasets) to approximately 11\% (unseen-projects protocol), a delta that illustrated how substantially random-split metrics could diverge from realistic deployment performance. The metrics reported in this study, including the Hybrid Block-decision F1 of 0.186, were likely optimistic relative to what would be observed under a project-level holdout.
 
 \textbf{Limitation 3: Single Dataset Limits External Validity.} All experimental conclusions were derived from a single benchmark dataset, DiverseVul, which covers C/C++ code drawn from open-source projects on GitHub. Results may not generalize to: (a) other programming languages (Python, Java, JavaScript, Rust), since both the ML model's learned representations and the PaC rule set were calibrated to C/C++ patterns; (b) closed-source or enterprise codebases, whose coding styles, project structures, and vulnerability distributions may differ substantially from open-source repositories; or (c) other vulnerability datasets (e.g., Devign, BigVul, the Juliet Test Suite), which apply different labeling methodologies and may emphasize different CWE distributions. Researchers and practitioners should treat the quantitative findings as specific to the DiverseVul-C/C++ setting until cross-dataset replication is available.
 
-\textbf{Limitation 4: Static Hybrid Weights Were Not Validated Under Distribution Shift.} The hybrid weights ($\alpha = 0.75$, $\beta = 0.25$) and decision thresholds (Block $\geq 0.40$, Review $\geq 0.10$) were optimized on the DiverseVul validation set and evaluated on the DiverseVul test set from the same distribution. There was no evaluation of whether these parameters remained effective when the codebase characteristics, vulnerability mix, or PaC coverage rate changed. In production environments, distribution shift is the norm rather than the exception, and statically tuned parameters may degrade in effectiveness over time without periodic recalibration.
+\textbf{Limitation 4: Static Hybrid Weights Were Not Validated Under Distribution Shift.} The hybrid weights ($\alpha = 0.75$, $\beta = 0.25$) and decision thresholds (Block $\geq 0.40$, Review $\geq 0.10$) were optimized on the DiverseVul validation set and evaluated on the DiverseVul test set from the same distribution. There was no evaluation of whether these parameters remained effective when the codebase characteristics, vulnerability mix, or PaC coverage rate changed. In production environments, distribution shift was the norm rather than the exception, and statically tuned parameters could degrade in effectiveness over time without periodic recalibration.
 
 \textbf{Limitation 5: Absence of Human-in-the-Loop and Developer Acceptance Evaluation.} This study evaluated purely technical detection performance. The governance framework's practical utility, including whether developers trust and comply with its decisions, whether the REVIEW tier's volume is operationally manageable, and whether the Block decisions are actionable given the available explanations, was not assessed. These organizational factors are known to significantly influence the real-world impact of automated governance tools \citep{rahman2023}.
 
@@ -1233,7 +1257,7 @@ The following limitations circumscribed the scope and generalizability of this s
 
 The rapid proliferation of AI coding assistants in modern software development pipelines created an urgent need for governance frameworks capable of detecting vulnerabilities generated or introduced by AI tools with greater accuracy and coverage than either rule-based or ML-based approaches could achieve in isolation. This study addressed that need by designing, implementing, and empirically evaluating a Hybrid ML-PaC Governance framework for vulnerability detection in C/C++ source code.
 
-The framework integrated a fine-tuned CodeBERT model as the ML channel and a Semgrep Policy-as-Code system as the PaC channel, combining their outputs through a tunable weighted linear formula into a unified risk score. A threshold-based Decision Engine then classified each code function as BLOCK, REVIEW, or APPROVE. The study followed a four-phase methodology: (1) dataset curation from DiverseVul via Hugging Face, yielding approximately 264,000 training samples and 33,000 test samples; (2) model training and selection, in which CodeBERT substantially outperformed a Random Forest baseline (F1 = 0.189 vs.\ 0.024 on the validation set) and was selected for the governance experiment; (3) a controlled governance experiment comparing ML-Only, PaC-Only, and Hybrid approaches on the 33,050-sample test set; and (4) evaluation and statistical analysis using precision, recall, F1-score, ROC-AUC, McNemar's test, odds ratios, a paired bootstrap confidence interval for the Hybrid-minus-ML AUC difference, and a post-hoc sweep over the PaC weight $\beta$ with validation thresholds re-tuned at each setting.
+The framework integrated a fine-tuned CodeBERT model as the ML channel and a Semgrep Policy-as-Code system as the PaC channel, combining their outputs through a tunable weighted linear formula into a unified risk score. A threshold-based Decision Engine then classified each code function as BLOCK, REVIEW, or APPROVE. The study followed a four-phase methodology: (1) dataset curation from DiverseVul via Hugging Face, yielding approximately 264,000 training samples and 33,000 test samples; (2) model training and selection, in which CodeBERT substantially outperformed a Random Forest baseline (F1 = 0.189 vs.\ 0.024 on the validation set) and was selected for the governance experiment; (3) a controlled governance experiment comparing ML-Only, PaC-Only, and Hybrid approaches on the 33,050-sample test set; and (4) a multi-stage statistical evaluation comprising primary Block-decision metrics, Cochran's Q test with post-hoc Bonferroni-corrected McNemar comparisons, ROC-AUC analysis with paired bootstrap confidence intervals for the Hybrid-minus-ML AUC difference, a post-hoc PaC weight sensitivity sweep, 10-fold stratified cross-validation, Shapiro--Wilk normality and Levene's homoscedasticity checks, and a two-way ANOVA with Approach $\times$ Decision class interaction.
 
 A key methodological refinement during Phase 3 was the expansion of the Semgrep configuration. With \texttt{p/c} only, the PaC channel produced zero findings on the validation and test sets, and weight optimization drove the hybrid to $\alpha = 1.00$, $\beta = 0.00$ (effectively ML-Only). The configuration was expanded to include \texttt{p/cwe-top-25} and a custom rule set targeting the top DiverseVul CWEs, after which PaC produced non-zero findings on approximately 11\% of test set functions and the optimizer (with a minimum PaC weight constraint $\beta \geq 0.20$) yielded $\alpha = 0.75$, $\beta = 0.25$. This before/after documents that expanding PaC rule sets is what allows the PaC channel to receive non-zero weight. The final tuned configuration used for evaluation was $\alpha = 0.75$, $\beta = 0.25$, with a Block threshold of 0.40.
 
@@ -1247,13 +1271,15 @@ The study produced the following key findings:
 
 \textbf{Finding 3: The Hybrid approach was statistically significantly superior to PaC-Only.} The Hybrid approach achieved a Block-decision F1-score of 0.186 vs.\ 0.056 for PaC-Only, and a Recall of 0.346 vs.\ 0.033. McNemar's test confirmed strong statistical significance (p $<$ 0.001), with an odds ratio of 6.13 (95\% CI: 5.67--6.63), indicating that the Hybrid approach was approximately six times more likely to make a correct ``Block'' decision than PaC-Only.
 
-\textbf{Finding 3b: The Hybrid approach yielded a marginal but consistent improvement in continuous discriminatory power over ML-Only.} While the Hybrid and ML-Only approaches were statistically indistinguishable on the binary Block-decision metrics (precision, recall, F1), the Hybrid approach achieved a higher ROC-AUC (0.709 vs.\ 0.704 for ML-Only; 0.552 for PaC-Only). A paired bootstrap over the test set indicated that the difference $\Delta\mathrm{AUC} = \mathrm{AUC}_{\mathrm{Hybrid}} - \mathrm{AUC}_{\mathrm{ML}}$ was positive with a 95\% percentile confidence interval excluding zero (Table~\ref{tab:auc_bootstrap}), so the ranking advantage was statistically resolvable under case resampling while remaining small in absolute magnitude. Importantly, this improvement occurred without any degradation of the binary decision metrics, confirming that adding the PaC channel did not harm the existing ML signal. The gain was bounded by sparse PaC coverage (non-zero on $\approx$11\% of test functions); under higher PaC coverage, a larger AUC improvement and a measurable precision gain would be expected.
+\textbf{Finding 4: The Hybrid approach yielded a marginal but consistent improvement in continuous discriminatory power over ML-Only.} While the Hybrid and ML-Only approaches were statistically indistinguishable on the binary Block-decision metrics (precision, recall, F1), the Hybrid approach achieved a higher ROC-AUC (0.709 vs.\ 0.704 for ML-Only; 0.552 for PaC-Only). A paired bootstrap over the test set indicated that the difference $\Delta\mathrm{AUC} = \mathrm{AUC}_{\mathrm{Hybrid}} - \mathrm{AUC}_{\mathrm{ML}}$ was positive with a 95\% percentile confidence interval excluding zero (Table~\ref{tab:auc_bootstrap}), so the ranking advantage was statistically resolvable under case resampling while remaining small in absolute magnitude. Importantly, this improvement occurred without any degradation of the binary decision metrics, confirming that adding the PaC channel did not harm the existing ML signal. The gain was bounded by sparse PaC coverage (non-zero on $\approx$11\% of test functions); under higher PaC coverage, a larger AUC improvement and a measurable precision gain would be expected.
 
-\textbf{Finding 3c: Post-hoc $\beta$ sensitivity aligned Phase~3 with the $\Delta\mathrm{AUC}$ ridge but not with peak Block F1 under per-$\beta$ tuning.} Sweeping $\beta$ with validation thresholds re-tuned at each value (Figure~\ref{fig:pac_sensitivity}, Table~\ref{tab:pac_gain_peaks}) showed that $\Delta\mathrm{AUC}$ was largest near $\beta \approx 0.25$, matching the Phase~3 tuned PaC weight, whereas peak Block F1 along the sweep occurred at higher $\beta$ (approximately $0.60$--$0.65$ for \texttt{pac\_gain} $= 1.0$). Scaled PaC (\texttt{pac\_gain} $> 1$) modestly raised peak F1 and shifted the $\Delta\mathrm{AUC}$-maximizing $\beta$ downward, illustrating a trade-off between threshold-tuned binary F1 and continuous ranking quality as PaC influence varies.
+\textbf{Finding 5: Post-hoc $\beta$ sensitivity aligned Phase~3 with the $\Delta\mathrm{AUC}$ ridge but not with peak Block F1 under per-$\beta$ tuning.} Sweeping $\beta$ with validation thresholds re-tuned at each value (Figure~\ref{fig:pac_sensitivity}, Table~\ref{tab:pac_gain_peaks}) showed that $\Delta\mathrm{AUC}$ was largest near $\beta \approx 0.25$, matching the Phase~3 tuned PaC weight, whereas peak Block F1 along the sweep occurred at higher $\beta$ (approximately $0.60$--$0.65$ for \texttt{pac\_gain} $= 1.0$). Scaled PaC (\texttt{pac\_gain} $> 1$) modestly raised peak F1 and shifted the $\Delta\mathrm{AUC}$-maximizing $\beta$ downward, illustrating a trade-off between threshold-tuned binary F1 and continuous ranking quality as PaC influence varies.
 
-\textbf{Finding 4: PaC exhibited high intrinsic precision but very low recall.} When Semgrep rules fired, they produced highly reliable Block predictions (precision = 0.206), but coverage of the vulnerable population was very low (recall = 0.033). This confirmed the complementary profile of PaC, high precision, low recall, relative to ML (lower precision, higher recall).
+\textbf{Finding 6: PaC exhibited high intrinsic precision but very low recall.} When Semgrep rules fired, they produced highly reliable Block predictions (precision = 0.206), but coverage of the vulnerable population was very low (recall = 0.033). This confirmed the complementary profile of PaC, high precision, low recall, relative to ML (lower precision, higher recall).
 
-\textbf{Finding 5: The p/c Semgrep Registry Produced Zero Findings on DiverseVul---A Practically Significant Coverage Gap.} With \texttt{p/c} only, the PaC channel produced zero findings across all 33,050 test-set functions, and weight optimization drove the hybrid to $\alpha = 1.00$, $\beta = 0.00$ (effectively ML-Only). Verification confirmed that the pipeline operated correctly; the zero-finding result was a genuine coverage mismatch between the \texttt{p/c} rule set and the vulnerability patterns present in DiverseVul. This finding is significant in its own right: it demonstrates that a widely-adopted, officially-maintained Semgrep registry can produce zero governance coverage on a CVE-validated vulnerability corpus, underscoring the necessity of coverage auditing prior to PaC deployment. The expansion to \texttt{p/cwe-top-25} plus custom CWE rules produced non-zero PaC signal on approximately 11\% of samples and allowed the optimizer to assign $\alpha = 0.75$, $\beta = 0.25$. This before/after documents that increasing PaC rule coverage is what enables the PaC channel to receive meaningful weight.
+\textbf{Finding 7: The Approach $\times$ Decision Interaction in the ANOVA Confirmed That PaC-Only Occupies a Complementary Rather Than Uniformly Inferior Role.} The two-way ANOVA with interaction ($F(2, 45) = 228.24$, $p < 0.001$) revealed that PaC-Only's relative deficit was specific to Block decisions (mean Block F1 $= 0.056$) and was partially reversed on Unblock decisions, where PaC-Only's high specificity produced a modestly higher mean Unblock F1 ($= 0.967$) compared with ML-Only and Hybrid ($\approx 0.901$). This interaction confirmed that the three approaches were not uniformly ranked across all evaluation criteria, and that PaC's high-precision profile constituted a genuine niche contribution to the governance architecture, even if that contribution was not visible in the Block-focused F1 metrics.
+
+\textbf{Finding 8: The p/c Semgrep Registry Produced Zero Findings on DiverseVul---A Practically Significant Coverage Gap.} With \texttt{p/c} only, the PaC channel produced zero findings across all 33,050 test-set functions, and weight optimization drove the hybrid to $\alpha = 1.00$, $\beta = 0.00$ (effectively ML-Only). Verification confirmed that the pipeline operated correctly; the zero-finding result was a genuine coverage mismatch between the \texttt{p/c} rule set and the vulnerability patterns present in DiverseVul. This finding is significant in its own right: it demonstrates that a widely-adopted, officially-maintained Semgrep registry can produce zero governance coverage on a CVE-validated vulnerability corpus, underscoring the necessity of coverage auditing prior to PaC deployment. The expansion to \texttt{p/cwe-top-25} plus custom CWE rules produced non-zero PaC signal on approximately 11\% of samples and allowed the optimizer to assign $\alpha = 0.75$, $\beta = 0.25$. This before/after documents that increasing PaC rule coverage is what enables the PaC channel to receive meaningful weight.
 
 \section{Conclusions}
 
@@ -1297,8 +1323,8 @@ Based on the study's findings and conclusions, the following recommendations wer
 % REFERENCES
 % ============================================================
 \renewcommand{\bibname}{REFERENCES}
-\bibliography{references}
 \bibliographystyle{apalike}
+\bibliography{references}
 
 % ============================================================
 % APPENDICES
