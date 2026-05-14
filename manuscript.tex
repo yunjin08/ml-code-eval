@@ -1138,13 +1138,13 @@ To determine whether the observed precision differences across governance approa
 \toprule
 \textbf{Source} & \textbf{Sum Sq.} & \textbf{$df$} & \textbf{$F$} & \textbf{$p$-value} \\
 \midrule
-Governance Approach      & --- & 2  & --- & --- \\
-Decision Class           & --- & 1  & --- & --- \\
-Approach $\times$ Decision & --- & 2  & --- & --- \\
-Fold (block)             & --- & 9  & --- & --- \\
-Residual                 & --- & 45 &    & \\
+Governance Approach      & 0.0116 & 2  & 3.0002 & 0.0598 \\
+Decision Class           & 9.6071 & 1  & 4963.8116 & $< 0.001^{***}$ \\
+Approach $\times$ Decision & 0.0226 & 2  & 5.8263 & $0.006^{**}$ \\
+Fold (block)             & 0.0258 & 9  & 1.4833 & 0.1834 \\
+Residual                 & 0.0871 & 45 &    & \\
 \bottomrule
-\multicolumn{5}{l}{\small Type~II SS; $n = 60$ observations. Values filled after notebook execution.}\\
+\multicolumn{5}{l}{\small Type~II SS; $n = 60$ observations. $^{*}p < 0.05$, $^{**}p < 0.01$, $^{***}p < 0.001$.}\\
 \end{tabular}
 \end{table}
 
@@ -1169,13 +1169,13 @@ The same ANOVA framework was applied with \textbf{Recall} as the dependent varia
 \toprule
 \textbf{Source} & \textbf{Sum Sq.} & \textbf{$df$} & \textbf{$F$} & \textbf{$p$-value} \\
 \midrule
-Governance Approach      & --- & 2  & --- & --- \\
-Decision Class           & --- & 1  & --- & --- \\
-Approach $\times$ Decision & --- & 2  & --- & --- \\
-Fold (block)             & --- & 9  & --- & --- \\
-Residual                 & --- & 45 &    & \\
+Governance Approach      & 0.1007 & 2  & 73.1198 & $< 0.001^{***}$ \\
+Decision Class           & 6.4887 & 1  & 9420.9049 & $< 0.001^{***}$ \\
+Approach $\times$ Decision & 0.6835 & 2  & 496.1553 & $< 0.001^{***}$ \\
+Fold (block)             & 0.0155 & 9  & 2.4957 & $0.021^{*}$ \\
+Residual                 & 0.0310 & 45 &    & \\
 \bottomrule
-\multicolumn{5}{l}{\small Type~II SS; $n = 60$ observations. Values filled after notebook execution.}\\
+\multicolumn{5}{l}{\small Type~II SS; $n = 60$ observations. $^{*}p < 0.05$, $^{**}p < 0.01$, $^{***}p < 0.001$.}\\
 \end{tabular}
 \end{table}
 
