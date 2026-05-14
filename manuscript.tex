@@ -69,8 +69,25 @@
 
 % Phase 4 bootstrap ΔAUC: regenerate with \texttt{python src/phase4\_evaluation.py}
 % PaC sensitivity: regenerate with \texttt{python src/pac\_sensitivity\_sweep.py --pac-gains 1.0,1.5,2.0}
-\input{tex/phase4_auc_bootstrap_constants.tex}
-\input{tex/pac_sensitivity_constants.tex}
+% Fallbacks ensure compilation works on Overleaf (where tex/ files are not auto-generated).
+\IfFileExists{tex/phase4_auc_bootstrap_constants.tex}{%
+  \input{tex/phase4_auc_bootstrap_constants.tex}%
+}{%
+  \providecommand{\PhaseFourDeltaAucPoint}{0.0042}%
+  \providecommand{\PhaseFourDeltaAucCILow}{0.0014}%
+  \providecommand{\PhaseFourDeltaAucCIHigh}{0.0070}%
+  \providecommand{\PhaseFourBootstrapB}{5000}%
+  \providecommand{\PhaseFourBootstrapPOneSided}{0.0010}%
+}
+\IfFileExists{tex/pac_sensitivity_constants.tex}{%
+  \input{tex/pac_sensitivity_constants.tex}%
+}{%
+  \providecommand{\PacSensPeakFOneBeta}{0.65}%
+  \providecommand{\PacSensPeakFOne}{0.1910}%
+  \providecommand{\PacSensPeakDeltaAucBeta}{0.25}%
+  \providecommand{\PacSensPeakDeltaAuc}{0.0042}%
+  \providecommand{\PacSensPhaseThreeBeta}{0.25}%
+}
 % ============================================================
 \begin{document}
 % ============================================================
@@ -493,14 +510,10 @@ To assess whether the observed advantage of the Hybrid continuous risk score ove
 
 To map how hybrid performance depends on the relative weight of PaC versus ML, a \textbf{post-hoc sweep} was conducted over $\beta \in [0,1]$ with $\alpha = 1 - \beta$ at fixed normalized scores (from the Phase~3 validation min--max statistics). For each $\beta$, Block and Review thresholds were re-tuned on the validation set to maximize Block F1 using the same grid as Phase~3. Test-set Block F1 and $\Delta\mathrm{AUC} = \mathrm{AUC}_{\mathrm{Hybrid}} - \mathrm{AUC}_{\mathrm{ML}}$ were then computed. Unless noted otherwise, the sweep uses \texttt{pac\_gain} $= 1.0$, i.e., the observed normalized PaC scores. Multiplying normalized PaC by a gain $g > 1$ before clipping to $[0,1]$ simulates a stronger PaC channel (e.g., richer rules) without re-running Semgrep; gains $\{1.5, 2.0\}$ were summarized alongside the default. This supplements the single Phase~3 configuration (including $\beta = \PacSensPhaseThreeBeta$ with $\beta \geq 0.20$) by tracing the response of F1 and $\Delta\mathrm{AUC}$ across $\beta$.
 
-\subsubsection{Cochran's Q Test and Post-hoc Pairwise Comparisons}
-
-To assess whether the three governance approaches produced \textit{statistically different} Block-decision patterns on the same test samples, \textbf{Cochran's Q test} \citep{cochran1950} was applied. Cochran's Q is the multi-category extension of McNemar's test for matched binary outcomes: it tests the null hypothesis $H_0$: the probability of a Block decision is equal across all three methods, using a $\chi^2$ approximation with $k-1 = 2$ degrees of freedom. A significant global Q warranted post-hoc pairwise \textbf{McNemar's tests} across all three method pairs (ML-Only vs.\ PaC-Only, ML-Only vs.\ Hybrid, PaC-Only vs.\ Hybrid) with \textbf{Bonferroni correction} ($\alpha_{\text{corr}} = 0.05/3 \approx 0.017$) to control the family-wise error rate. The odds ratio was reported for each pair to quantify the direction and magnitude of any difference.
-
 \subsubsection{Cross-Validation Design and Parametric Statistical Inference}
 \label{sec:cv_design}
 
-The non-parametric tests described above (McNemar's test, Cochran's Q) require no distributional assumptions and operate on the full, undivided test set. However, they do not produce a sampling distribution of performance estimates across data partitions, which is necessary for parametric inference (ANOVA) and for characterising the fold-to-fold stability of each governance approach. To support this, the DiverseVul test set was subjected to a \textbf{10-fold stratified cross-validation} protocol. Stratification on the ground-truth label ensured that the approximately 5.8\% vulnerable class ratio was preserved in every fold, eliminating fold-to-fold class-imbalance as a confound.
+McNemar's test, described above, requires no distributional assumptions and operates on the full, undivided test set. However, it does not produce a sampling distribution of performance estimates across data partitions, which is necessary for parametric inference (ANOVA) and for characterising the fold-to-fold stability of each governance approach. To support this, the DiverseVul test set was subjected to a \textbf{10-fold stratified cross-validation} protocol. Stratification on the ground-truth label ensured that the approximately 5.8\% vulnerable class ratio was preserved in every fold, eliminating fold-to-fold class-imbalance as a confound.
 
 For each fold, both Block and Unblock decisions for each governance approach were evaluated against the ground-truth label using the same fixed models and thresholds derived in Phase~3 (no re-training occurred per fold). This yielded a $10 \times 3 \times 2$ observation matrix: 10 folds $\times$ 3 governance approaches $\times$ 2 outcome classes (Block, Unblock), where the cell value was the F1-score for that class in that fold, for a total of 60 observations. The per-fold Block F1 vectors ($n = 10$ per approach) served as the empirical sampling distribution for the three parametric assumption checks (Shapiro--Wilk, Levene's, and ANOVA) described below; the full 60-observation dataset was used for the interaction ANOVA.
 
@@ -537,7 +550,7 @@ Rejection of $H_0^{\text{Interaction}}$ at $\alpha = 0.05$ indicates that the go
 
 \subsection{Hypothesis Validation}
 
-Each formal hypothesis was directly evaluated through a structured comparison. H1 was evaluated by comparing the F1-scores for the ``Block'' decision across all three approaches, with global significance confirmed by Cochran's Q and pairwise significance localised by McNemar's test. H2 was evaluated by comparing the Recall scores for ``Block'' between the Hybrid and PaC-Only approaches, with the corresponding post-hoc McNemar test determining whether the difference was statistically significant. H3 was evaluated by comparing the Precision scores for ``Block'' between the Hybrid and ML-Only approaches, again with McNemar's test as the arbiter of significance.
+Each formal hypothesis was directly evaluated through a structured comparison. H1 was evaluated by comparing the F1-scores for the ``Block'' decision across all three approaches, with global significance confirmed by the two-way ANOVA Approach main effect and pairwise significance localised by McNemar's test. H2 was evaluated by comparing the Recall scores for ``Block'' between the Hybrid and PaC-Only approaches, with the corresponding post-hoc McNemar test determining whether the difference was statistically significant. H3 was evaluated by comparing the Precision scores for ``Block'' between the Hybrid and ML-Only approaches, again with McNemar's test as the arbiter of significance.
 
 % ============================================================
 \chapter{RESULTS AND DISCUSSION}
@@ -688,32 +701,6 @@ Figure~\ref{fig:block_metrics} visualizes the Block-decision precision, recall, 
 \end{figure}
 
 The Hybrid approach achieved a Block-decision F1-score of 0.186, identical to that of the ML-Only approach. Both substantially outperformed the PaC-Only approach (F1 = 0.056). The PaC-Only approach exhibited notably higher precision (0.206 vs.\ 0.127), confirming its capacity to generate high-confidence ``Block'' decisions when its rules fired; however, its very low recall (0.033) severely limited its coverage of the vulnerable population, resulting in a markedly inferior F1-score.
-
-\subsection{Cochran's Q Test and Post-hoc Pairwise Comparisons}
-
-The primary metrics in Table~\ref{tab:primary_metrics} showed that Hybrid and ML-Only were numerically identical while PaC-Only lagged substantially. However, point metrics alone could not determine whether these differences were statistically real or a product of the particular test-set composition. To answer this \textit{globally} across all three approaches simultaneously on the same paired test samples---without inflating the Type~I error that would result from running multiple independent tests---Cochran's Q test was applied first, followed by Bonferroni-corrected post-hoc McNemar comparisons to localise which specific pairs drove any significant global effect.
-
-Table~\ref{tab:cochransq} presents the results of Cochran's Q test and the three post-hoc McNemar pairwise comparisons (Bonferroni-corrected) applied to the Block decisions of all three governance approaches on the DiverseVul test set ($n = 33\,050$).
-
-\begin{table}[H]
-\centering
-\caption{Cochran's Q Global Test and Post-hoc Pairwise McNemar Tests for Block Decisions (Bonferroni $\alpha_{\text{corr}} = 0.017$)}
-\label{tab:cochransq}
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Comparison} & \textbf{$n_{10}$} & \textbf{$n_{01}$} & \textbf{McNemar $\chi^2$} & \textbf{$p$-value} \\
-\midrule
-ML-Only vs.\ PaC-Only  & 5\,068 & 123   & 4708.75 & $< 0.001^{*}$ \\
-ML-Only vs.\ Hybrid    & 0      & 2     & 0.50    & 0.480 (n.s.) \\
-PaC-Only vs.\ Hybrid   & 123    & 5\,070 & 4710.75 & $< 0.001^{*}$ \\
-\bottomrule
-\multicolumn{5}{l}{\small Cochran's $Q(2) = 9421.50$, $p < 0.001$. Post-hoc Bonferroni $\alpha_{\text{corr}} \approx 0.017$.} \\
-\multicolumn{5}{l}{\small $n_{10}$: instances where only approach A blocks; $n_{01}$: only approach B blocks.} \\
-\multicolumn{5}{l}{\small $^{*}$: significant after Bonferroni correction; n.s.: not significant.} \\
-\end{tabular}
-\end{table}
-
-The Cochran's Q statistic of $Q(2) = 9421.50$ ($p < 0.001$) decisively rejects the null hypothesis that the three governance approaches produce equivalent Block-decision patterns. The post-hoc breakdown reveals where the differences lie. The ML-Only vs.\ PaC-Only comparison ($\chi^2 = 4708.75$, $p < 0.001$, OR $= 41.20$) and the PaC-Only vs.\ Hybrid comparison ($\chi^2 = 4710.75$, $p < 0.001$, OR $= 0.024$) are both highly significant after Bonferroni correction: ML-Only blocks 5\,068 samples that PaC-Only misses, while PaC-Only blocks only 123 samples that ML-Only misses. The ML-Only vs.\ Hybrid comparison ($\chi^2 = 0.50$, $p = 0.480$), by contrast, is not significant --- only 2 out of 33\,050 test instances received a different Block decision between the two approaches. Together, these results establish that (i) ML-Only and Hybrid are statistically indistinguishable in their Block decisions, (ii) both are overwhelmingly and significantly more aggressive blockers than PaC-Only, confirming the central role of the ML channel in driving Block coverage.
 
 \subsection{ROC-AUC Analysis}
 
@@ -885,7 +872,7 @@ Table~\ref{tab:pac_gain_peaks} reports peaks under scaled PaC (\texttt{pac\_gain
 
 \subsection{McNemar's Test and Effect Size}
 
-While Cochran's Q established the global significance of approach differences and ROC-AUC assessed threshold-agnostic ranking quality, neither directly quantified how much more often one specific approach made a \textit{correct} Block decision than another. McNemar's test addressed this by examining discordant pairs---test instances where one approach was correct and the other was not---and computing an odds ratio that expressed the magnitude of any directional advantage.
+While ROC-AUC assessed threshold-agnostic ranking quality, it did not directly quantify how much more often one specific approach made a \textit{correct} Block decision than another. McNemar's test addressed this by examining discordant pairs---test instances where one approach was correct and the other was not---and computing an odds ratio that expressed the magnitude of any directional advantage.
 
 Table~\ref{tab:mcnemar} presents the results of McNemar's tests comparing the Hybrid approach against each single-method baseline.
 
@@ -909,7 +896,7 @@ The comparison between the Hybrid and PaC-Only approaches was highly statistical
 
 \section{Cross-Validation and Parametric Statistical Analysis}
 
-The non-parametric tests presented thus far (Cochran's Q and McNemar's test) operated on the full, undivided test set and required no distributional assumptions. Their limitation was that they did not produce a sampling distribution of performance estimates across data partitions, which was necessary for parametric inference (ANOVA) and for characterising fold-to-fold stability. To address this, the analysis proceeded through a sequence of three steps: (1) 10-fold stratified cross-validation to generate per-fold performance observations; (2) assumption checks (Shapiro--Wilk normality test and Levene's test for homogeneity of variance) to validate the inferential preconditions for ANOVA; and (3) a two-way ANOVA with interaction to formally test the joint effects of governance approach and decision class on F1 performance. Each step built on the previous one in a principled progression from descriptive to inferential.
+McNemar's test, presented above, operated on the full, undivided test set and required no distributional assumptions. Its limitation was that it did not produce a sampling distribution of performance estimates across data partitions, which was necessary for parametric inference (ANOVA) and for characterising fold-to-fold stability. To address this, the analysis proceeded through a sequence of three steps: (1) 10-fold stratified cross-validation to generate per-fold performance observations; (2) assumption checks (Shapiro--Wilk normality test and Levene's test for homogeneity of variance) to validate the inferential preconditions for ANOVA; and (3) a two-way ANOVA with interaction to formally test the joint effects of governance approach and decision class on F1 performance. Each step built on the previous one in a principled progression from descriptive to inferential.
 
 \subsection{Ten-Fold Cross-Validation Block F1 Distributions}
 
@@ -1062,7 +1049,7 @@ Residual                 & 0.0126 & 45 &        & \\
 
 Three findings emerged from this analysis, each answering a distinct question.
 
-First, the Governance Approach main effect was significant ($F(2, 45) = 24.04$, $p < 0.001$), confirming that the three approaches differed in overall F1 performance even after accounting for decision class and fold variation. This result converged with the non-parametric Cochran's Q ($Q(2) = 9421.50$, $p < 0.001$, Table~\ref{tab:cochransq}), providing corroborating parametric evidence that governance approach was a statistically meaningful determinant of classification quality.
+First, the Governance Approach main effect was significant ($F(2, 45) = 24.04$, $p < 0.001$), confirming that the three approaches differed in overall F1 performance even after accounting for decision class and fold variation, providing parametric evidence that governance approach was a statistically meaningful determinant of classification quality.
 
 Second, the Decision Class main effect was extraordinarily large ($F(1, 45) = 32{,}599.22$, $p < 0.001$), reflecting the well-known structural asymmetry of vulnerability detection: Block decisions (minority-class identification) are inherently far harder than Unblock decisions (majority-class identification), so the two decision classes have vastly different F1 baselines. This effect was expected and served primarily as a verification that the model correctly partitioned the variance.
 
@@ -1138,7 +1125,7 @@ Figure~\ref{fig:interaction_f1} presents the corresponding interaction plot for 
 \label{fig:cv_anova_summary}
 \end{figure}
 
-Taken together, the cross-validation analysis, its assumption checks, and the two-way ANOVA with interaction provided a rigorous parametric complement to the non-parametric McNemar and Cochran's Q tests. All four inferential procedures---Cochran's Q, post-hoc McNemar, and two-way ANOVA with interaction (after Shapiro--Wilk and Levene's verification)---converged on the same substantive conclusion: governance approach was a highly significant determinant of F1, with ML-Only and Hybrid statistically indistinguishable from each other across both decision classes. Crucially, the significant Approach $\times$ Decision interaction ($F(2, 45) = 228.24$, $p < 0.001$) revealed that PaC-Only's deficit was concentrated on Block decisions (low recall), while its high-specificity profile gave it a modest Unblock F1 advantage. This interaction enriched the interpretation beyond a simple ranking: it confirmed that the three approaches were not uniformly ordered across all evaluation criteria, with PaC-Only occupying a complementary niche of high precision on the decisions it made, even as ML-Only and Hybrid dominated on recall-driven Block-decision coverage.
+Taken together, the cross-validation analysis, its assumption checks, and the two-way ANOVA with interaction provided a rigorous parametric complement to the non-parametric McNemar's test. Both inferential procedures---McNemar's test and two-way ANOVA with interaction (after Shapiro--Wilk and Levene's verification)---converged on the same substantive conclusion: governance approach was a highly significant determinant of F1, with ML-Only and Hybrid statistically indistinguishable from each other across both decision classes. Crucially, the significant Approach $\times$ Decision interaction ($F(2, 45) = 228.24$, $p < 0.001$) revealed that PaC-Only's deficit was concentrated on Block decisions (low recall), while its high-specificity profile gave it a modest Unblock F1 advantage. This interaction enriched the interpretation beyond a simple ranking: it confirmed that the three approaches were not uniformly ordered across all evaluation criteria, with PaC-Only occupying a complementary niche of high precision on the decisions it made, even as ML-Only and Hybrid dominated on recall-driven Block-decision coverage.
 
 \subsection{Two-Way ANOVA with Interaction: Precision}
 
@@ -1328,7 +1315,7 @@ The following limitations circumscribed the scope and generalizability of this s
 
 The rapid proliferation of AI coding assistants in modern software development pipelines created an urgent need for governance frameworks capable of detecting vulnerabilities generated or introduced by AI tools with greater accuracy and coverage than either rule-based or ML-based approaches could achieve in isolation. This study addressed that need by designing, implementing, and empirically evaluating a Hybrid ML-PaC Governance framework for vulnerability detection in C/C++ source code.
 
-The framework integrated a fine-tuned CodeBERT model as the ML channel and a Semgrep Policy-as-Code system as the PaC channel, combining their outputs through a tunable weighted linear formula into a unified risk score. A threshold-based Decision Engine then classified each code function as BLOCK, REVIEW, or APPROVE. The study followed a four-phase methodology: (1) dataset curation from DiverseVul via Hugging Face, yielding approximately 264,000 training samples and 33,000 test samples; (2) model training and selection, in which CodeBERT substantially outperformed a Random Forest baseline (F1 = 0.189 vs.\ 0.024 on the validation set) and was selected for the governance experiment; (3) a controlled governance experiment comparing ML-Only, PaC-Only, and Hybrid approaches on the 33,050-sample test set; and (4) a multi-stage statistical evaluation comprising primary Block-decision metrics, Cochran's Q test with post-hoc Bonferroni-corrected McNemar comparisons, ROC-AUC analysis with paired bootstrap confidence intervals for the Hybrid-minus-ML AUC difference, a post-hoc PaC weight sensitivity sweep, 10-fold stratified cross-validation, Shapiro--Wilk normality and Levene's homoscedasticity checks, and a two-way ANOVA with Approach $\times$ Decision class interaction.
+The framework integrated a fine-tuned CodeBERT model as the ML channel and a Semgrep Policy-as-Code system as the PaC channel, combining their outputs through a tunable weighted linear formula into a unified risk score. A threshold-based Decision Engine then classified each code function as BLOCK, REVIEW, or APPROVE. The study followed a four-phase methodology: (1) dataset curation from DiverseVul via Hugging Face, yielding approximately 264,000 training samples and 33,000 test samples; (2) model training and selection, in which CodeBERT substantially outperformed a Random Forest baseline (F1 = 0.189 vs.\ 0.024 on the validation set) and was selected for the governance experiment; (3) a controlled governance experiment comparing ML-Only, PaC-Only, and Hybrid approaches on the 33,050-sample test set; and (4) a multi-stage statistical evaluation comprising primary Block-decision metrics, McNemar's test with odds ratios, ROC-AUC analysis with paired bootstrap confidence intervals for the Hybrid-minus-ML AUC difference, a post-hoc PaC weight sensitivity sweep, 10-fold stratified cross-validation, Shapiro--Wilk normality and Levene's homoscedasticity checks, and a two-way ANOVA with Approach $\times$ Decision class interaction.
 
 A key methodological refinement during Phase 3 was the expansion of the Semgrep configuration. With \texttt{p/c} only, the PaC channel produced zero findings on the validation and test sets, and weight optimization drove the hybrid to $\alpha = 1.00$, $\beta = 0.00$ (effectively ML-Only). The configuration was expanded to include \texttt{p/cwe-top-25} and a custom rule set targeting the top DiverseVul CWEs, after which PaC produced non-zero findings on approximately 11\% of test set functions and the optimizer (with a minimum PaC weight constraint $\beta \geq 0.20$) yielded $\alpha = 0.75$, $\beta = 0.25$. This before/after documents that expanding PaC rule sets is what allows the PaC channel to receive non-zero weight. The final tuned configuration used for evaluation was $\alpha = 0.75$, $\beta = 0.25$, with a Block threshold of 0.40.
 
