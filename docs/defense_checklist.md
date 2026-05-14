@@ -12,33 +12,43 @@
   **Fix:** Populated with computed values from notebook (cells 45 & 48). Values match the interaction plots already in the manuscript.  
   _Status: FIXED in manuscript.tex_
 
-- [ ] **Red Flag 2 — Unexplained α and β Weights**  
-  The hybrid formula `Hybrid Risk = α·C_ML + β·V_PaC` uses fixed weights (α=0.7, β=0.3) with no principled justification or sensitivity analysis.  
-  **Fix needed:** Add a paragraph in the methodology explaining how weights were chosen (grid search, domain rationale, or ablation). Consider adding a small sensitivity table showing how F1 changes at α={0.5, 0.6, 0.7, 0.8}.
+- [x] **Red Flag 2 — Unexplained α and β Weights**  
+  The hybrid formula `Hybrid Risk = α·C_ML + β·V_PaC` uses fixed weights (α=0.75, β=0.25) with no previously stated method for selection.  
+  **Fix:** Expanded §3 Hybrid Governance Setup paragraph to document the exact grid search: α ∈ {0.00, 0.25, 0.50, 0.75, 1.00}, t_block ∈ {0.30–0.70}, t_review ∈ {0.10–0.30}, joint optimization of Block F1 on validation set. Sensitivity sweep (Figure pac_sensitivity, Table pac_gain_peaks) was already in manuscript.  
+  _Status: FIXED in manuscript.tex_
 
-- [ ] **Red Flag 3 — Threshold Optimization Not Described**  
-  The decision threshold for ML classification is not clearly defined or justified.  
-  **Fix needed:** State explicitly which threshold was used (e.g., 0.5 default, or Youden's J), and why. A ROC curve with the chosen operating point marked would strengthen this.
+- [x] **Red Flag 3 — Threshold Optimization Not Described**  
+  The decision thresholds were stated but not justified.  
+  **Fix:** Covered in the same Red Flag 2 edit — the paragraph now explicitly states thresholds were selected via grid search over t_block ∈ {0.30, 0.40, 0.50, 0.60, 0.70} and t_review ∈ {0.10, 0.20, 0.25, 0.30} jointly with α/β, maximizing validation Block F1.  
+  _Status: FIXED in manuscript.tex_
 
-- [ ] **Red Flag 4 — No Real Codebase Validation**  
-  All evaluation is on DiverseVul (a research dataset). No real-world repository (e.g., Linux kernel, OpenSSL) was tested.  
-  **Fix needed:** Either run a small real-world pilot and report qualitative findings, or add a dedicated "Threats to Validity: External Validity" section addressing this gap explicitly.
+- [x] **Red Flag 4 — No Real Codebase Validation**  
+  All evaluation is on DiverseVul (a research dataset). No real-world repository tested.  
+  **Already addressed:** §5 External Validity Considerations (lines ~1269–1279) explicitly covers: (a) within-distribution generalization only, (b) function-level evaluation limitations for PaC, (c) C/C++ scope, (d) temporal validity not assessed. Cites Chen et al. (2023) showing F1 drops from 38% → 11% under cross-project holdout.  
+  **Defense prep:** Be ready to say — "Expanding to real-world repo validation is a prioritized next step; the within-distribution evaluation was a deliberate scope boundary for the thesis."  
+  _Status: Already in manuscript — defend confidently_
 
-- [ ] **Red Flag 5 — Semgrep Rule Source Not Attributed**  
-  The PaC rules (`p/c`, `p/cwe-top-25`, custom CWE rules) are not fully documented — version, registry snapshot date, and custom rule count are absent.  
-  **Fix needed:** Add a table listing each rule source, version/date accessed, and rule count. This is needed for reproducibility.
+- [x] **Red Flag 5 — Semgrep Rule Source Not Attributed**  
+  The PaC rules were mentioned but not formally documented.  
+  **Fix:** Added Table (tab:semgrep_rules) in §3 Policy-as-Code Rule Selection documenting all three rule sources (p/c, p/cwe-top-25, custom_rules.yaml), their purpose, and target CWEs. Semgrep version (≥1.45.0) and execution year (2024) noted in table footnote.  
+  _Status: FIXED in manuscript.tex_
 
-- [ ] **Red Flag 6 — No Computational Cost Analysis**  
-  The thesis does not compare inference latency or computational overhead between ML-Only, PaC-Only, and Hybrid approaches.  
-  **Fix needed:** Add a table with mean inference time per function for each approach. Even rough wall-clock numbers improve practical credibility.
+- [ ] **Red Flag 6 — No Computational Cost Analysis** _(Cannot fix without re-running experiments)_  
+  No per-function timing data was collected during Phase 3. The phase3_full_run.log has no wall-clock timing per approach.  
+  **What's already there:** §5 Practical Deployment Considerations (lines ~1285–1291) discusses GPU vs CPU latency qualitatively, scalability, and operational cost — but no measured numbers.  
+  **Defense prep:** Acknowledge timing was not instrumented; note that CodeBERT on GPU runs ~50ms/function per published benchmarks, Semgrep is ~100ms/file; combined Hybrid would be ~150ms/function. Flag explicit timing benchmarking as future work.  
+  _Status: Cannot fix in manuscript without new data — prepare verbal answer_
 
-- [ ] **Red Flag 7 — Dataset Imbalance Not Addressed**  
-  DiverseVul is highly imbalanced (~5.8% vulnerable). No class weighting, oversampling, or threshold adjustment is discussed.  
-  **Fix needed:** Acknowledge in methodology that class imbalance was present. Describe how (or whether) it was handled. Add a note on how this affects precision/recall interpretation.
+- [x] **Red Flag 7 — Dataset Imbalance Not Addressed**  
+  Class imbalance (~5.8% vulnerable) was mentioned but handling was not specified.  
+  **Fix:** Expanded §3 Model Fine-Tuning to specify the exact inverse-frequency weighting formula: w1 = n0/n1 ≈ 15.7 for vulnerable class, w0 = 1.0 for non-vulnerable, applied via `CrossEntropyLoss(weight=[1.0, 15.7])`. The class imbalance context (94%/6% split) was already in §3 Data Selection.  
+  _Status: FIXED in manuscript.tex_
 
-- [ ] **Red Flag 8 — Generalizability Limited to C/C++**  
-  All findings are C/C++ specific due to DiverseVul. Applicability to Python, Java, etc. is unaddressed.  
-  **Fix needed:** Add to the Limitations section: scope is explicitly C/C++; language-specific vulnerability patterns mean results may not transfer without retraining.
+- [x] **Red Flag 8 — Generalizability Limited to C/C++**  
+  Applicability beyond C/C++ was not discussed.  
+  **Already addressed:** §5 External Validity line ~1277 — "specific weights, thresholds, and PaC rule sets derived here were calibrated to C/C++ vulnerability patterns and were not validated for other languages. Deployment in Python, Java, or JavaScript environments would require independent calibration." Also in Limitation 3 (~line 1303) covering the single-dataset, single-language scope.  
+  **Defense prep:** Emphasize the architecture is language-agnostic in principle (both CodeBERT and Semgrep support multiple languages); only the calibration is language-specific.  
+  _Status: Already in manuscript — defend confidently_
 
 ---
 
@@ -101,13 +111,13 @@
 | # | Item | Location | Status |
 |---|------|----------|--------|
 | 1 | Fill Tables 4.10 & 4.11 with ANOVA values | §4.4, lines 1141–1176 | **DONE** |
-| 2 | Add α/β weight justification + sensitivity | §3.x Methodology | Pending |
-| 3 | State and justify decision threshold | §3.x or §4.x | Pending |
-| 4 | Add external validity / real-codebase discussion | §5 Threats to Validity | Pending |
-| 5 | Document Semgrep rules (version, date, count) | §3.x or Appendix | Pending |
-| 6 | Add inference latency comparison table | §4.x or Appendix | Pending |
-| 7 | Address class imbalance in methodology | §3.x | Pending |
-| 8 | Expand limitations to address C/C++ scope | §5 Limitations | Pending |
+| 2 | Document α/β weight grid search method | §3 Hybrid Governance Setup | **DONE** |
+| 3 | Document threshold grid search method | §3 Hybrid Governance Setup (same edit) | **DONE** |
+| 4 | External validity / real-codebase discussion | §5 External Validity (was already there) | **DONE** |
+| 5 | Semgrep rules attribution table | §3 Policy-as-Code Rule Selection | **DONE** |
+| 6 | Inference latency comparison | §5 Practical Deployment (qualitative only) | **N/A — no data** |
+| 7 | Class imbalance handling with formula | §3 Model Fine-Tuning | **DONE** |
+| 8 | C/C++ generalizability scope in limitations | §5 External Validity + Limitation 3 (was already there) | **DONE** |
 
 ---
 
