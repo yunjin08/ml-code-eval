@@ -1,7 +1,7 @@
 % ============================================================
 %  UP Cebu Special Problem -- Final Manuscript
-%  A Hybrid ML and Policy-as-Code Approach for Software Governance:
-%  An Empirical Evaluation of Vulnerability Detection
+%  Hybrid CodeBERT--Semgrep Governance for Vulnerability Detection:
+%  A Machine Learning and Policy-as-Code Evaluation
 %  Author: Jed Edison J. Donaire
 % ============================================================
 \documentclass[12pt, letterpaper]{report}
@@ -95,8 +95,10 @@
 \begin{titlepage}
 \begin{center}
 \vspace*{0.5in}
-{\large\bfseries A Hybrid ML and Policy-as-Code Approach for Software Governance:\\
-An Empirical Evaluation of Vulnerability Detection}\\[1.5em]
+\begin{singlespace}
+{\large\bfseries Hybrid CodeBERT--Semgrep Governance for Vulnerability Detection:\\
+A Machine Learning and Policy-as-Code Evaluation}
+\end{singlespace}\vspace{1.5em}
 
 A Special Problem Presented to the\\
 Faculty of the Department of Computer Science,\\
@@ -111,7 +113,7 @@ BS Computer Science\\[2em]
 DHARRYL PRINCE ABELLANA\\
 Special Problem Adviser\\[2em]
 
-February 2026
+June 2026
 \end{center}
 \end{titlepage}
 
@@ -125,8 +127,10 @@ February 2026
 College of Science\\[0.3em]
 Department of Computer Science\\[1.5em]
 
-{\large\bfseries A Hybrid ML and Policy-as-Code Approach for Software Governance:\\
-An Empirical Evaluation of Vulnerability Detection}\\[2em]
+\begin{singlespace}
+{\large\bfseries Hybrid CodeBERT--Semgrep Governance for Vulnerability Detection:\\
+A Machine Learning and Policy-as-Code Evaluation}
+\end{singlespace}\vspace{2em}
 \end{center}
 
 Permission is given for the following people to have access to this thesis:
@@ -148,7 +152,7 @@ Special Problem Adviser
 % --- Approval Sheet ---
 \newpage
 \thispagestyle{plain}
-This special problem entitled ``A Hybrid ML and Policy-as-Code Approach for Software Governance: An Empirical Evaluation of Vulnerability Detection'' prepared and submitted by JED EDISON J. DONAIRE is approved by:
+This special problem entitled ``Hybrid CodeBERT--Semgrep Governance for Vulnerability Detection: A Machine Learning and Policy-as-Code Evaluation'' prepared and submitted by JED EDISON J. DONAIRE is approved by:
 
 \vspace{2em}
 \begin{center}
@@ -213,7 +217,7 @@ Jed Edison J. Donaire
 
 The rapid integration of Artificial Intelligence (AI) coding assistants into modern software development pipelines has intensified demands on software governance, the automated process of assessing code quality, security, and compliance. Existing frameworks, including DevSecOps pipelines, AI-augmented development tools, and Quality-Security Metrics (QSM) models, addressed these demands individually and without mutual integration, leaving critical detection, integration, and adaptivity gaps. This study designed, implemented, and empirically evaluated a Hybrid Governance framework that combined the semantic analysis capability of a fine-tuned CodeBERT model with the rule-based enforcement power of a Semgrep Policy-as-Code (PaC) system for vulnerability detection in C/C++ source code.
 
-The study followed a four-phase methodology: (1) dataset curation from the DiverseVul benchmark, (2) model training and selection, (3) a controlled governance experiment comparing ML-Only, PaC-Only, and Hybrid approaches, and (4) statistical evaluation using precision, recall, F1-score, McNemar's test, ROC-AUC analysis, and a paired bootstrap confidence interval for the Hybrid-minus-ML AUC difference. Results demonstrated that the Hybrid approach achieved a Block-decision F1-score of 0.186 and an AUC of 0.709, matching the ML-Only approach on classification metrics while substantially outperforming the PaC-Only approach (F1 = 0.056, AUC = 0.552). McNemar's test confirmed that the Hybrid approach was statistically significantly superior to PaC-Only (p \textless{} 0.001, OR = 6.13), whereas the difference between Hybrid and ML-Only was not statistically significant (p = 0.157). A paired bootstrap over the test set indicated that the small AUC advantage of Hybrid over ML-Only was statistically resolvable (95\% CI for $\Delta$AUC excluded zero) while remaining small in absolute terms. The findings indicated that in settings where PaC rule coverage is sparse relative to the vulnerability profile of the dataset, ML dominates the hybrid risk score; however, the hybrid architecture preserved the policy channel's capacity to contribute high-precision, low-recall signals and yielded a marginal AUC gain over ML-Only. The study concluded that the Hybrid framework represents a viable and extensible governance architecture, particularly for environments where PaC rule sets are continuously strengthened to match evolving vulnerability patterns.
+The study followed a four-phase methodology: (1) dataset curation from the DiverseVul benchmark, (2) model training and selection, (3) a controlled governance experiment comparing ML-Only, PaC-Only, and Hybrid approaches, and (4) statistical evaluation using precision, recall, F1-score, McNemar's test, ROC-AUC analysis, and a paired bootstrap confidence interval for the Hybrid-minus-ML AUC difference. Results demonstrated that the Hybrid approach achieved a Block-decision F1-score of 0.186 and an AUC of 0.709, matching the ML-Only approach on classification metrics while substantially outperforming the PaC-Only approach (F1 = 0.056, AUC = 0.552). McNemar's test confirmed that the Hybrid approach was statistically significantly superior to PaC-Only (p \textless{} 0.001, OR = 6.13), whereas the difference between Hybrid and ML-Only was not statistically significant (p = 0.157). A paired bootstrap over the test set indicated that the small AUC advantage of Hybrid over ML-Only was statistically resolvable (95\% CI for $\Delta$AUC excluded zero) while remaining small in absolute terms. Two-way ANOVA with interaction (Type~II SS) was applied to the 60-observation cross-validated dataset (10 folds $\times$ 3 approaches $\times$ 2 decision classes) for F1, Precision, and Recall. The Governance Approach main effect was significant for F1 ($F(2, 45) = 24.04$, $p < 0.001$) and Recall ($F(2, 45) = 73.12$, $p < 0.001$). The Approach $\times$ Decision Class interaction was highly significant across all three metrics ($F(2, 45) = 228.24$, $p < 0.001$ for F1; $F(2, 45) = 5.83$, $p = 0.006$ for Precision; $F(2, 45) = 496.16$, $p < 0.001$ for Recall), confirming that the relative performance advantage of each governance approach was not uniform across Block and Unblock decision classes, and that PaC-Only's deficit was concentrated specifically in Block (vulnerability detection) outcomes. The findings indicated that in settings where PaC rule coverage is sparse relative to the vulnerability profile of the dataset, ML dominates the hybrid risk score; however, the hybrid architecture preserved the policy channel's capacity to contribute high-precision, low-recall signals and yielded a marginal AUC gain over ML-Only. The study concluded that the Hybrid framework represents a viable and extensible governance architecture, particularly for environments where PaC rule sets are continuously strengthened to match evolving vulnerability patterns.
 
 \vspace{1em}
 \noindent\textbf{Keywords:} Software Governance, Vulnerability Detection, CodeBERT, Policy-as-Code, Semgrep, Machine Learning, Hybrid Governance, DiverseVul, DevSecOps, Software Security
@@ -1454,5 +1458,16 @@ The final tuned Hybrid Governance configuration, derived from validation-set opt
     \item PaC score normalization: min-max using validation set statistics
     \item Semgrep configurations: \texttt{p/c}, \texttt{p/cwe-top-25}, \texttt{config/custom\_rules.yaml}
 \end{itemize}
+
+\chapter{CODE SNIPPET TESTING TOOL}
+\label{app:tool}
+
+A publicly accessible web-based tool was developed alongside this study to allow practitioners, reviewers, and future researchers to interactively test C/C++ code snippets against the Hybrid CodeBERT--Semgrep governance framework described in this manuscript. The tool was deployed and made available at the following URL:
+
+\begin{center}
+\texttt{https://code-eval.jed-edison.com/}
+\end{center}
+
+The interface accepted raw C/C++ code as input and returned a governance decision (Block, Review, or Pass) together with the underlying ML confidence score, the PaC flag count, and the combined hybrid score computed using the tuned weights ($\alpha = 0.75$, $\beta = 0.25$). The tool was intended to serve as a practical demonstration of the framework's real-time applicability and to support replication of the findings reported in Chapter 4.
 
 \end{document}
