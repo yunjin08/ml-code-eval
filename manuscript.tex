@@ -558,7 +558,7 @@ The primary parametric test was a \textbf{two-way analysis of variance with inte
   \item \textbf{Factor A --- Governance Approach} (3 levels: ML-Only, PaC-Only, Hybrid): the primary factor of experimental interest.
   \item \textbf{Factor B --- Decision Class} (2 levels: Block, Unblock): included to test whether the relative performance of approaches varies across decision types.
   \item \textbf{Approach $\times$ Decision interaction}: tests whether the Approach effect depends on which decision class is being evaluated.
-  \item \textbf{Blocking factor --- Fold} (10 levels, Folds 1--10): a nuisance factor incorporated to remove fold-to-fold variability in class composition from the error term, thereby increasing statistical power.
+  \item \textbf{Blocking factor --- CV Block} (10 levels, CV Blocks 1--10, each corresponding to one stratified fold): a nuisance factor incorporated to remove partition-to-partition variability in class composition from the error term, thereby increasing statistical power.
   \item \textbf{Dependent variable}: per-fold F1-score (for the specified decision class).
 \end{itemize}
 
@@ -567,7 +567,7 @@ The model is specified as:
 Y_{ijk} = \mu + \tau_i + \delta_j + (\tau\delta)_{ij} + \beta_k + \varepsilon_{ijk}
 \label{eq:anova_model}
 \end{equation}
-where $Y_{ijk}$ is the F1-score for approach $i$, decision class $j$, and fold $k$; $\tau_i$ is the main effect of governance approach; $\delta_j$ is the main effect of decision class; $(\tau\delta)_{ij}$ is the Approach $\times$ Decision interaction; $\beta_k$ is the blocking effect of fold; and $\varepsilon_{ijk} \sim \mathcal{N}(0, \sigma^2)$ is the residual. Type~II sums of squares were computed so that each effect was adjusted for all others. The null hypothesis for the interaction term is:
+where $Y_{ijk}$ is the F1-score for approach $i$, decision class $j$, and fold $k$; $\tau_i$ is the main effect of governance approach; $\delta_j$ is the main effect of decision class; $(\tau\delta)_{ij}$ is the Approach $\times$ Decision interaction; $\beta_k$ is the blocking effect of CV block $k$; and $\varepsilon_{ijk} \sim \mathcal{N}(0, \sigma^2)$ is the residual. Type~II sums of squares were computed so that each effect was adjusted for all others. The null hypothesis for the interaction term is:
 
 \begin{equation}
 H_0^{\text{Interaction}}: (\tau\delta)_{ij} = 0 \; \forall\; i, j
@@ -1059,7 +1059,7 @@ Having confirmed that normality and homoscedasticity assumptions were met, the t
 
 \begin{table}[H]
 \centering
-\caption{Two-Way ANOVA with Interaction (Type~II SS): F1 $\sim$ Approach $\times$ Decision + Fold}
+\caption{Two-Way ANOVA with Interaction (Type~II SS): F1 $\sim$ Approach $\times$ Decision + CV Block}
 \label{tab:anova}
 \begin{tabular}{lrrrr}
 \toprule
@@ -1068,7 +1068,7 @@ Having confirmed that normality and homoscedasticity assumptions were met, the t
 Governance Approach      & 0.0135 & 2  &  24.04 & $< 0.001^{***}$ \\
 Decision Class           & 9.1380 & 1  & 32\,599.22 & $< 0.001^{***}$ \\
 Approach $\times$ Decision & 0.1280 & 2  & 228.24 & $< 0.001^{***}$ \\
-Fold (block)             & 0.0065 & 9  &   2.58 & $0.017^{*}$ \\
+CV Block                 & 0.0065 & 9  &   2.58 & $0.017^{*}$ \\
 Residual                 & 0.0126 & 45 &        & \\
 \bottomrule
 \multicolumn{5}{l}{\small $^{***}p < 0.001$; $^{*}p < 0.05$. Type~II SS; $n = 60$ observations (10 folds $\times$ 3 approaches $\times$ 2 decision classes).}\\
@@ -1083,7 +1083,7 @@ Second, the Decision Class main effect was extraordinarily large ($F(1, 45) = 32
 
 Third, and most substantively, the Approach $\times$ Decision interaction was highly significant ($F(2, 45) = 228.24$, $p < 0.001$). This interaction carried a specific interpretive message: the \textit{relative ranking} of the three governance approaches was not the same for Block decisions as it was for Unblock decisions. Concretely, PaC-Only's comparative deficit was largest on Block decisions (where its low recall dominated; mean Block F1 $= 0.056$) and was reversed on Unblock decisions, where its high specificity produced mean Unblock F1 $= 0.967$, modestly higher than ML-Only and Hybrid ($\approx 0.901$). ML-Only and Hybrid were nearly indistinguishable on both decision classes, consistent with the McNemar result (only 2 discordant pairs). This interaction validated the complementary error profiles described qualitatively in the Discussion: PaC was a high-precision, low-recall approach whose advantage manifested specifically on negative (non-Block) classifications, not on the detection of true defects.
 
-The Fold blocking effect reached significance ($F(9, 45) = 2.58$, $p = 0.017$), confirming that removing fold-to-fold variability from the error term was methodologically justified. Without the fold block, the residual variance would have been inflated, reducing the sensitivity of the Approach and interaction tests.
+The CV Block blocking effect reached significance ($F(9, 45) = 2.58$, $p = 0.017$), confirming that removing partition-to-partition variability from the error term was methodologically justified. Without the CV block, the residual variance would have been inflated, reducing the sensitivity of the Approach and interaction tests.
 
 Figure~\ref{fig:cv_anova_summary} consolidates the ANOVA-relevant information for the Block decision class in a single visualization, overlaying the per-fold observations on the group means with 95\% confidence intervals. The figure made the Approach $\times$ Decision interaction tangible: the tight clustering of ML-Only and Hybrid observations around a common mean contrasted sharply with the lower, more dispersed PaC-Only observations, while PaC-Only's high-specificity advantage on Unblock decisions (not shown in this figure) constituted the other half of the interaction pattern.
 
@@ -1157,11 +1157,11 @@ Taken together, the cross-validation analysis, its assumption checks, and the tw
 
 \subsection{Two-Way ANOVA with Interaction: Precision}
 
-To determine whether the observed precision differences across governance approaches were consistent across both decision classes, the same two-way ANOVA framework was applied with \textbf{Precision} as the dependent variable. The 60-observation dataset (10 folds $\times$ 3 approaches $\times$ 2 decision classes) and the model specification --- Precision $\sim$ Approach $\times$ Decision + Fold --- were identical to the F1 analysis. Table~\ref{tab:anova_precision} presents the results.
+To determine whether the observed precision differences across governance approaches were consistent across both decision classes, the same two-way ANOVA framework was applied with \textbf{Precision} as the dependent variable. The 60-observation dataset (10 folds $\times$ 3 approaches $\times$ 2 decision classes) and the model specification --- Precision $\sim$ Approach $\times$ Decision + CV Block --- were identical to the F1 analysis. Table~\ref{tab:anova_precision} presents the results.
 
 \begin{table}[H]
 \centering
-\caption{Two-Way ANOVA with Interaction (Type~II SS): Precision $\sim$ Approach $\times$ Decision + Fold}
+\caption{Two-Way ANOVA with Interaction (Type~II SS): Precision $\sim$ Approach $\times$ Decision + CV Block}
 \label{tab:anova_precision}
 \begin{tabular}{lrrrr}
 \toprule
@@ -1170,7 +1170,7 @@ To determine whether the observed precision differences across governance approa
 Governance Approach      & 0.0116 & 2  & 3.0002 & 0.0598 \\
 Decision Class           & 9.6071 & 1  & 4963.8116 & $< 0.001^{***}$ \\
 Approach $\times$ Decision & 0.0226 & 2  & 5.8263 & $0.006^{**}$ \\
-Fold (block)             & 0.0258 & 9  & 1.4833 & 0.1834 \\
+CV Block                 & 0.0258 & 9  & 1.4833 & 0.1834 \\
 Residual                 & 0.0871 & 45 &    & \\
 \bottomrule
 \multicolumn{5}{l}{\small Type~II SS; $n = 60$ observations. $^{*}p < 0.05$, $^{**}p < 0.01$, $^{***}p < 0.001$.}\\
@@ -1188,11 +1188,11 @@ Figure~\ref{fig:interaction_precision} shows the interaction plot for Precision.
 
 \subsection{Two-Way ANOVA with Interaction: Recall}
 
-The same ANOVA framework was applied with \textbf{Recall} as the dependent variable --- Recall $\sim$ Approach $\times$ Decision + Fold --- to determine whether governance approaches differed in recall consistently across both decision classes. Table~\ref{tab:anova_recall} presents the results.
+The same ANOVA framework was applied with \textbf{Recall} as the dependent variable --- Recall $\sim$ Approach $\times$ Decision + CV Block --- to determine whether governance approaches differed in recall consistently across both decision classes. Table~\ref{tab:anova_recall} presents the results.
 
 \begin{table}[H]
 \centering
-\caption{Two-Way ANOVA with Interaction (Type~II SS): Recall $\sim$ Approach $\times$ Decision + Fold}
+\caption{Two-Way ANOVA with Interaction (Type~II SS): Recall $\sim$ Approach $\times$ Decision + CV Block}
 \label{tab:anova_recall}
 \begin{tabular}{lrrrr}
 \toprule
@@ -1201,7 +1201,7 @@ The same ANOVA framework was applied with \textbf{Recall} as the dependent varia
 Governance Approach      & 0.1007 & 2  & 73.1198 & $< 0.001^{***}$ \\
 Decision Class           & 6.4887 & 1  & 9420.9049 & $< 0.001^{***}$ \\
 Approach $\times$ Decision & 0.6835 & 2  & 496.1553 & $< 0.001^{***}$ \\
-Fold (block)             & 0.0155 & 9  & 2.4957 & $0.021^{*}$ \\
+CV Block                 & 0.0155 & 9  & 2.4957 & $0.021^{*}$ \\
 Residual                 & 0.0310 & 45 &    & \\
 \bottomrule
 \multicolumn{5}{l}{\small Type~II SS; $n = 60$ observations. $^{*}p < 0.05$, $^{**}p < 0.01$, $^{***}p < 0.001$.}\\
