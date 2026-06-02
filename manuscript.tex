@@ -61,7 +61,6 @@
 \usepackage{enumitem}
 \usepackage{ragged2e}
 \usepackage{xcolor}
-\usepackage{parskip}
 \usepackage{indentfirst}
 \usepackage{afterpage}
 \usepackage[titletoc,toc,page]{appendix}
@@ -514,19 +513,20 @@ The Semgrep policy set was constructed based on the OWASP Top 10 and the Common 
 \centering
 \caption{Semgrep Policy-as-Code Rule Configuration (Semgrep $\geq$ v1.45.0)}
 \label{tab:semgrep_rules}
-\resizebox{\linewidth}{!}{%
-\begin{tabular}{p{3.5cm}p{5.0cm}p{4.6cm}}
-\toprule
-\textbf{Rule Source} & \textbf{Purpose} & \textbf{Target CWEs / Coverage} \\
-\midrule
-\texttt{p/c} & Community C/C++ registry: dangerous standard-library functions, memory safety patterns, general lint & General memory safety; CWE-119, CWE-78, CWE-134 (limited DiverseVul coverage) \\
-\texttt{p/cwe-top-25} & CWE Top 25 Most Dangerous Weaknesses registry (C/C++ applicable rules) & CWE-787, CWE-125, CWE-119, CWE-416, CWE-476, CWE-190, CWE-415 (and others in Top 25) \\
-\texttt{config/custom\_rules.yaml} & Custom rules written specifically to target the top CWEs in the DiverseVul distribution: dangerous buffer functions (\texttt{strcpy}, \texttt{gets}, \texttt{sprintf}, \texttt{memcpy}, \texttt{strncpy}, \texttt{snprintf}), NULL dereference, use-after-free, double-free, integer overflow in allocation & CWE-119, CWE-787, CWE-125, CWE-476, CWE-416, CWE-415, CWE-190 \\
-\bottomrule
-\end{tabular}%
-}
 \begin{singlespace}
-\footnotesize\noindent\textit{Note.} All three configurations ran simultaneously via the command \texttt{semgrep scan --config p/c --config p/cwe-top-25 --config config/custom\_rules.yaml}. Rule counts are determined at runtime by Semgrep. Registry versions reflect the state of the Semgrep registry at the time of execution (2024).
+\small
+\begin{tabular}{p{3.8cm}p{5.2cm}p{4.0cm}}
+\toprule
+\textbf{Rule Source} & \textbf{Purpose} & \textbf{Target CWEs} \\
+\midrule
+\texttt{p/c} & Community C/C++ registry covering dangerous library functions and memory safety patterns & CWE-119, CWE-78, CWE-134 \\[0.5em]
+\texttt{p/cwe-top-25} & CWE Top 25 registry (C/C++ applicable rules) & CWE-787, CWE-125, CWE-119, CWE-416, CWE-476, CWE-190, CWE-415 \\[0.5em]
+\texttt{config/} \newline \texttt{custom\_rules.yaml} & Custom rules targeting top DiverseVul CWEs: unsafe buffer functions, NULL dereference, use-after-free, double-free, integer overflow & CWE-119, CWE-787, CWE-125, CWE-476, CWE-416, CWE-415, CWE-190 \\
+\bottomrule
+\end{tabular}
+\end{singlespace}
+\begin{singlespace}
+\footnotesize\noindent\textit{Note.} All three configurations ran simultaneously. Rule counts are determined at runtime by Semgrep. Registry versions reflect the state of the Semgrep registry at time of execution (2024).
 \end{singlespace}
 \end{table}
 
@@ -644,14 +644,12 @@ Rejection of $H_0^{\text{Interaction}}$ at $\alpha = 0.05$ indicates that the go
 Each formal hypothesis was directly evaluated through a structured comparison. H1 was evaluated by comparing the F1-scores for the ``Block'' decision across all three approaches, with global significance confirmed by the two-way ANOVA Approach main effect and pairwise significance localised by McNemar's test. H2 was evaluated by comparing the Recall scores for ``Block'' between the Hybrid and PaC-Only approaches, with the corresponding post-hoc McNemar test determining whether the difference was statistically significant. H3 was evaluated by comparing the Precision scores for ``Block'' between the Hybrid and ML-Only approaches, again with McNemar's test as the arbiter of significance.
 
 % ============================================================
-\chapter{RESULTS AND DISCUSSION}
+\chapter{RESULTS}
 % ============================================================
 
-\section{Phase 1: Dataset Curation}
+The evaluation of the Hybrid ML-PaC Governance framework was carried out across a sequence of controlled experimental stages, each designed to isolate and measure a specific aspect of the framework's performance. The following sections report the empirical outcomes of model training and selection, the coverage behavior of the Policy-as-Code channel, and the comparative classification performance of the ML-Only, PaC-Only, and Hybrid governance approaches on the DiverseVul test set.
 
-Phase 1 encompassed the selection, filtering, and preparation of the dataset used throughout this study. As described in the Methodology, the DiverseVul benchmark \citep{chen2023} was accessed via Hugging Face and filtered to C/C++ functions, yielding approximately 264,000 training samples, 33,000 validation samples, and 33,050 test samples, with a class distribution of approximately 6\% vulnerable and 94\% non-vulnerable. The Semgrep Policy-as-Code rule set was also finalized during this phase, beginning with the \texttt{p/c} registry and expanding to include \texttt{p/cwe-top-25} and a custom rule set targeting the top CWEs in DiverseVul after an initial coverage audit. The full dataset statistics and rule configuration are documented in Appendix~\ref{app:dataset} and Appendix~\ref{app:cwes}, respectively. No new experimental results were generated in this phase; the curation outcomes served as the fixed inputs to all subsequent phases.
-
-\section{Phase 2: Model Training Results}
+\section{Model Training Results}
 
 The fine-tuning of CodeBERT on the DiverseVul C/C++ training set produced a model that substantially outperformed the Random Forest and KNN baselines. On the validation set, CodeBERT achieved a precision of 0.128, recall of 0.361, and F1-score of 0.189 for the vulnerable class. The Random Forest classifier, relying solely on static code metrics from Lizard, achieved a precision of 0.044, recall of 0.017, and F1-score of 0.024; the KNN classifier on the same Lizard features achieved a precision of 0.187, recall of 0.033, and F1-score of 0.056.
 
@@ -685,7 +683,7 @@ Figure~\ref{fig:phase2_validation} visualizes the comparison among CodeBERT, Ran
 \label{fig:phase2_validation}
 \end{figure}
 
-\section{Phase 3: Policy-as-Code Rule Coverage}
+\section{PaC Coverage Gap}
 
 \subsection{Empirical Finding: The p/c Registry Coverage Gap}
 
@@ -737,7 +735,7 @@ Figure~\ref{fig:weight_evolution} illustrates how the optimized hybrid weights s
 \label{fig:weight_evolution}
 \end{figure}
 
-\section{Phase 4: Primary Evaluation Results}
+\section{Primary Evaluation Results}
 
 \subsection{Precision, Recall, and F1-Score}
 \label{sec:phase4_primary}
@@ -1084,16 +1082,18 @@ Table~\ref{tab:shapiro_wilk} reports the Shapiro--Wilk statistic and $p$-value f
 \centering
 \caption{Shapiro--Wilk Normality Test Results for Per-Fold Block F1-Scores ($n = 10$ per group)}
 \label{tab:shapiro_wilk}
-\begin{tabular}{lccc}
+\begin{singlespace}
+\begin{tabular}{lccl}
 \toprule
-\textbf{Governance Approach} & \textbf{Shapiro--Wilk $W$} & \textbf{$p$-value} & \textbf{Normal ($\alpha = 0.05$)?} \\
+\textbf{Governance Approach} & \textbf{Shapiro--Wilk $W$} & \textbf{$p$-value} & \textbf{Normal?} \\
 \midrule
 ML-Only   & 0.9899 & 0.9967 & Yes \\
 PaC-Only  & 0.8765 & 0.1190 & Yes \\
 Hybrid    & 0.9893 & 0.9959 & Yes \\
 \bottomrule
-\multicolumn{4}{l}{\small $H_0$: data are drawn from a normal distribution. Failure to reject at $\alpha = 0.05$ supports normality.}\\
+\multicolumn{4}{p{0.85\textwidth}}{\small $H_0$: data are drawn from a normal distribution. Failure to reject at $\alpha = 0.05$ supports normality.}\\
 \end{tabular}
+\end{singlespace}
 \end{table}
 
 All three groups failed to reject normality at $\alpha = 0.05$: ML-Only ($W = 0.990$, $p = 0.997$), Hybrid ($W = 0.989$, $p = 0.996$), and PaC-Only ($W = 0.877$, $p = 0.119$). The normality assumption for ANOVA was satisfied across all three groups.
@@ -1110,18 +1110,20 @@ The two-way ANOVA with interaction was fitted to the full 60-observation dataset
 \centering
 \caption{Two-Way ANOVA with Interaction (Type~II SS): F1 $\sim$ Approach $\times$ Decision + CV Block}
 \label{tab:anova}
+\begin{singlespace}
 \begin{tabular}{lrrrr}
 \toprule
 \textbf{Source} & \textbf{Sum Sq.} & \textbf{$df$} & \textbf{$F$} & \textbf{$p$-value} \\
 \midrule
-Governance Approach      & 0.0135 & 2  &  24.04 & $< 0.001^{***}$ \\
-Decision Class           & 9.1380 & 1  & 32\,599.22 & $< 0.001^{***}$ \\
-Approach $\times$ Decision & 0.1280 & 2  & 228.24 & $< 0.001^{***}$ \\
-CV Block                 & 0.0065 & 9  &   2.58 & $0.017^{*}$ \\
-Residual                 & 0.0126 & 45 &        & \\
+Governance Approach        & 0.0135 & 2  &  24.04     & $< 0.001^{***}$ \\
+Decision Class             & 9.1380 & 1  & 32{,}599.22 & $< 0.001^{***}$ \\
+Approach $\times$ Decision & 0.1280 & 2  & 228.24     & $< 0.001^{***}$ \\
+CV Block                   & 0.0065 & 9  &   2.58     & $0.017^{*}$ \\
+Residual                   & 0.0126 & 45 &            & \\
 \bottomrule
-\multicolumn{5}{l}{\small $^{***}p < 0.001$; $^{*}p < 0.05$. Type~II SS; $n = 60$ observations (10 folds $\times$ 3 approaches $\times$ 2 decision classes).}\\
+\multicolumn{5}{p{0.85\textwidth}}{\small $^{***}p < 0.001$; $^{*}p < 0.05$. Type~II SS; $n = 60$ observations (10 folds $\times$ 3 approaches $\times$ 2 decision classes).}\\
 \end{tabular}
+\end{singlespace}
 \end{table}
 
 Figure~\ref{fig:cv_anova_summary} overlays per-fold observations on group means with 95\% confidence intervals. Figure~\ref{fig:interaction_f1} presents the interaction plot for F1.
@@ -1288,9 +1290,13 @@ The Hybrid approach's failure modes closely mirrored those of the ML channel. Pa
 
 The dominant failure mode across all three approaches was the inability to detect vulnerabilities requiring contextual or cross-function semantic reasoning. Both PaC (syntactic rule matching) and ML (sequence-level classification) operated at the function level, and exploitability of many missed vulnerabilities depended on information not present within a single function boundary.
 
-\section{Discussion}
+% ============================================================
+\chapter{DISCUSSION}
+% ============================================================
 
-\subsection{Phase 2: Model Training Results}
+The empirical results of this study surfaced a governance landscape in which machine learning and rule-based policy enforcement played complementary but asymmetric roles. CodeBERT's broad recall enabled coverage that no syntactic rule set could match at the evaluated scale, while Semgrep's deterministic matching, though sparse in this setting, produced highly reliable detections when it fired. Understanding why these patterns emerged, what they imply for organizations designing governance pipelines, and how they position the Hybrid framework relative to existing approaches requires situating the findings within the broader context of vulnerability detection research and software governance theory.
+
+\section{Model Training Results}
 
 The substantially superior F1-score and recall of CodeBERT (Figure~\ref{fig:phase2_validation}) confirmed the value of pre-trained transformer-based representations over hand-crafted static metrics for vulnerability classification, aligning with prior findings that code-specific language models capture complex syntactic and semantic patterns that elude feature-engineering approaches \citep{feng2020, zhou2024}.
 
@@ -1298,7 +1304,7 @@ The low absolute F1-score for both models reflected the significant class imbala
 
 Evaluation in this study used a random split over the DiverseVul corpus, so that train and test samples were drawn from the same distribution. \citet{chen2023} did not report CodeBERT results for DiverseVul-only training; they reported performance when training on combined datasets (e.g., Previous + DiverseVul) under a random split (F1 $\approx$ 38\%, precision $\approx$ 39\%) and under an unseen-projects holdout (F1 $\approx$ 12\%, precision $\approx$ 13\%). Because the present study used DiverseVul exclusively and a random split, results were not directly comparable; the validation F1 (0.189) and precision (0.128) reported here (Figure~\ref{fig:phase2_validation}) were consistent with single-dataset training and with \citet{chen2023}'s finding that deep learning-based vulnerability detection remained challenging.
 
-\subsection{Phase 3: PaC Coverage Gap}
+\section{PaC Coverage Gap}
 
 The finding that the \texttt{p/c} registry produced zero findings on the DiverseVul corpus carries a direct message for practitioners: selecting a Semgrep configuration based on reputation or community popularity, without auditing its coverage against the actual vulnerability distribution of the target codebase, can produce a governance layer that generates zero detections despite being technically active.
 
@@ -1306,7 +1312,7 @@ The zero-finding result was not a methodological failure but a genuine coverage 
 
 The weight evolution observed after rule set expansion (Table~\ref{tab:weight_evolution}) demonstrates that increasing PaC rule coverage is what allowed the PaC channel to receive non-zero weight. This outcome confirmed the well-documented limitation of rule-based systems: their coverage is bounded by the explicit patterns encoded in their rule sets, and function-level code snippets extracted from large repositories may not contain the syntactic triggers that static rules require \citep{kern2024, rahman2023}. The empirical evidence provides actionable guidance for organizations deploying PaC governance: rule set selection must be preceded by a coverage audit against a representative sample of the target codebase's vulnerability distribution, not merely against known-safe synthetic inputs.
 
-\subsection{Phase 4: Primary Evaluation Results}
+\section{Primary Evaluation Results}
 
 The convergence of the Hybrid and ML-Only approaches on classification metrics at the chosen thresholds was attributable to the sparse signal produced by the PaC channel. With $\alpha = 0.75$ and $\beta = 0.25$ (Table~\ref{tab:weight_evolution}; Appendix~\ref{app:config}) and PaC producing non-zero findings on only approximately 11\% of test set functions, the hybrid risk score was dominated by the ML confidence term for the vast majority of samples. Consequently, the functions that received sufficiently high ML confidence scores to exceed the Block threshold ($\geq 0.40$) were largely the same whether or not the PaC contribution was included (Table~\ref{tab:primary_metrics}). The minimum PaC weight constraint ($\beta \geq 0.20$) ensured that the PaC channel maintained a structural presence in the risk formula, but was insufficient to alter Block decisions when PaC scores were zero or near-zero for a function.
 
@@ -1314,13 +1320,13 @@ The marginal AUC improvement (Hybrid: 0.7086 vs.\ ML-Only: 0.7044; Table~\ref{ta
 
 These results were consistent with the practical reality documented in the governance literature: PaC systems are most effective when their rule sets are calibrated to the specific vulnerability profile of the codebase under analysis \citep{kern2024}. In the context of DiverseVul, the function-level code snippets, many of which were derived from complex, multi-file systems and extracted without their surrounding context, did not consistently present the syntactic triggers that Semgrep rules required. This ``context-stripping'' effect inherent in function-level benchmarks may systematically understate the contribution of PaC in end-to-end, file-level or repository-level governance pipelines where rules can match against broader structural patterns. The moderate absolute F1 (0.186) and precision (0.127) of the ML channel in this study (Table~\ref{tab:primary_metrics}) also align with \citet{chen2023}'s conclusion that deep learning is not yet ready for deployment in vulnerability detection due to high false positive rates and moderate F1; our results, under DiverseVul-only training, are consistent with that assessment.
 
-\subsection{PaC as a High-Precision Complementary Channel}
+\section{PaC as a High-Precision Complementary Channel}
 
 Despite its low recall (0.033), the PaC-Only approach demonstrated notably higher precision (0.206) compared to the ML-Only approach (0.127; Table~\ref{tab:primary_metrics}). This confirmed the theoretical expectation that rule-based systems, when their rules fire, tend to produce highly reliable positive predictions because they are grounded in deterministic, human-expert-encoded vulnerability signatures. In a governance context, high-precision ``Block'' decisions from PaC are particularly valuable because they reduce developer friction: when code is blocked by an explicit policy rule rather than an opaque model prediction, the decision is inherently interpretable and actionable.
 
 The hybrid architecture was designed to leverage precisely this complementarity---ML for breadth of recall, PaC for precision-enhancing filters---and the structure of the framework successfully preserved both channels (Figure~\ref{fig:block_metrics}). The limitation observed in this study was one of rule coverage, not of architectural design. As \citet{rahman2023} and \citet{kern2024} noted, expanding and maintaining PaC rule sets is an ongoing operational investment; organizations that commit to this investment would expect to see the PaC channel's contribution to the hybrid risk score grow, potentially producing the precision improvements posited in H3.
 
-\subsection{Cross-Validation and ANOVA Results}
+\section{Cross-Validation and ANOVA Results}
 
 The cross-validation results (Table~\ref{tab:cv_block_f1}; Figures~\ref{fig:cv_lineplot}--\ref{fig:cv_barchart}) confirmed the aggregate picture reported in Section~\ref{sec:phase4_primary}: across all 10 folds, ML-Only and Hybrid were nearly indistinguishable (mean Block F1: 0.1856 vs.\ 0.1855; mean difference $< 0.001$), while PaC-Only was consistently and substantially lower (mean Block F1: 0.0558). The slightly higher variability of PaC-Only (SD = 0.036 vs.\ 0.021 for the other two; Table~\ref{tab:cv_block_f1}) reflected its greater sensitivity to which specific vulnerable functions happened to fall within a given fold, since PaC rules fire on a sparse and uneven subset of the test population.
 
@@ -1336,7 +1342,7 @@ The CV Block blocking effect reached significance ($F(9, 45) = 2.58$, $p = 0.017
 
 Taken together, the cross-validation analysis, its assumption checks (Tables~\ref{tab:shapiro_wilk}--\ref{tab:anova}), and the two-way ANOVA with interaction provided a rigorous parametric complement to the non-parametric McNemar's test (Table~\ref{tab:mcnemar}). Both inferential procedures converged on the same substantive conclusion: governance approach was a highly significant determinant of F1 (Table~\ref{tab:anova}), with ML-Only and Hybrid statistically indistinguishable from each other across both decision classes. Crucially, the significant Approach $\times$ Decision interaction (Figure~\ref{fig:interaction_f1}) confirmed that the three approaches were not uniformly ordered across all evaluation criteria, with PaC-Only occupying a complementary niche of high precision on the decisions it made, even as ML-Only and Hybrid dominated on recall-driven Block-decision coverage.
 
-\subsection{Hypothesis Evaluation}
+\section{Hypothesis Evaluation}
 
 H1 was partially supported: the Hybrid F1-score (0.186) surpassed PaC-Only (0.056; Table~\ref{tab:primary_metrics}; McNemar's $p < 0.001$, Table~\ref{tab:mcnemar}) but was equal to ML-Only (both 0.186; $p = 0.157$). The Hybrid approach did not achieve the full superiority over both baselines that H1 posited.
 
@@ -1346,17 +1352,17 @@ H3 was not supported at the evaluated operating threshold. However, the hypothes
 
 The mechanism by which H3 was expected to operate---PaC reducing false positives by providing a high-precision filter---was structurally present in the framework, but was constrained by PaC's low recall (0.033) and sparse coverage (Table~\ref{tab:primary_metrics}). In theory, if the PaC channel fired on a false positive that the ML model assigned a high confidence score, adding a PaC score of zero to that function's hybrid risk would lower it below the Block threshold, thereby reducing false positives and improving precision. This mechanism could only produce a measurable precision gain when PaC coverage was high enough to fire on a meaningful fraction of the ML model's false positives. With only 11\% of test functions receiving any PaC findings (Table~\ref{tab:weight_evolution}), that condition was not met in this evaluation. H3 therefore remained an architecturally sound hypothesis whose empirical validation required a higher-coverage PaC rule set than was achievable on the DiverseVul function-level corpus with the current configuration.
 
-\subsection{Error Analysis}
+\section{Error Analysis}
 
 The dominant failure mode across all three governance approaches was the inability to detect vulnerabilities requiring contextual or cross-function semantic reasoning (Section~\ref{sec:phase4_primary}; Table~\ref{tab:primary_metrics}). Purely syntactic rule matching (PaC) and sequence-level classification (ML) both operated at the function level and shared the structural limitation that exploitability often depended on information not present within a single function boundary. The false positive profiles of both ML-Only and Hybrid (precision = 0.127; Table~\ref{tab:primary_metrics}) reflected the model's tendency to overfit to surface-level syntactic correlates of vulnerability---complex pointer arithmetic, memory management patterns---rather than causal reasoning about whether a given usage was actually unsafe in context. For PaC, the low recall (0.033; Table~\ref{tab:primary_metrics}) stemmed from the function-level code snippets lacking the surrounding context (header includes, macro definitions, caller state) that Semgrep rules often rely upon to fire accurately. These findings suggest that future governance architectures should augment function-level analysis with interprocedural analysis, call-graph context, or taint-flow information to more reliably identify the class of vulnerabilities that currently evades both channels.
 
-\subsection{Implications for Governance Architecture}
+\section{Implications for Governance Architecture}
 
 The findings carried several practical implications for organizations designing automated code governance pipelines. First, ML-based vulnerability detection, even at the moderate accuracy levels demonstrated by CodeBERT on DiverseVul, offered substantially broader coverage of critical defects than PaC alone, suggesting that ML should be the primary detection mechanism in any hybrid governance architecture. Second, PaC provided an interpretable, auditable layer that was essential for regulatory compliance and developer communication, justifying its inclusion even when its recall was low. Third, the hybrid architecture offered an extensible foundation: as PaC rule sets were expanded and aligned with the target codebase's vulnerability profile, the PaC channel's contribution to the hybrid risk score would increase, potentially yielding the precision gains that H3 predicted but that were not realized in this evaluation.
 
 These implications aligned with the broader literature on unified governance models \citep{zhang2023} and on the complementarity of ML and rule-based approaches in software quality assurance \citep{zhou2024}. They also underscored the practical research agenda identified by \citet{kern2024}: the primary remaining challenge in integrating static analysis and ML is not algorithmic but operational, ensuring that both channels are continuously calibrated to the evolving characteristics of the codebase and its regulatory environment.
 
-\subsection{Theoretical Interpretation of Hybrid Behavior}
+\section{Theoretical Interpretation of Hybrid Behavior}
 
 The observed performance characteristics of the Hybrid, ML-Only, and PaC-Only approaches aligned with well-established principles from ensemble learning and the classical bias-variance decomposition \citep{zhou2024}.
 
@@ -1366,7 +1372,7 @@ Ensemble learning theory predicts that combining diverse classifiers reduces err
 
 This framing also clarified the conditions under which the hybrid's theoretical advantage would become empirically observable. If PaC coverage increased from 11\% to 40--50\% of the vulnerable population, the variance-reducing effect of the PaC channel on the ML channel's false positive set would be large enough to produce a measurable precision improvement, moving the observed performance from the current ``complementary but constrained'' regime to the ``synergistic'' regime that H1 and H3 posited. The post-hoc $\beta$ sweep and gain analysis (Figure~\ref{fig:pac_sensitivity}; Table~\ref{tab:pac_gain_peaks}) directly characterized this transition: higher \texttt{pac\_gain} values, simulating richer PaC signal, modestly raised peak F1 and shifted the $\Delta\mathrm{AUC}$-maximizing $\beta$ downward, as expected when the PaC signal becomes more informative relative to ML.
 
-\subsection{External Validity Considerations}
+\section{External Validity Considerations}
 
 The generalizability of this study's findings was subject to several important boundary conditions that practitioners and future researchers should consider when interpreting or extending the results.
 
@@ -1378,7 +1384,7 @@ Third, the study examined only \textit{C/C++ code} from the DiverseVul benchmark
 
 Fourth, \textit{temporal validity} was not assessed. The random split did not respect the temporal ordering of commits, so the evaluation did not simulate the scenario of training on historical vulnerabilities and predicting future ones. A temporal holdout evaluation, training on pre-2020 commits and evaluating on post-2020 commits for example, would provide a more realistic assessment of the framework's adaptivity to emerging vulnerability patterns.
 
-\subsection{Practical Deployment Considerations}
+\section{Practical Deployment Considerations}
 
 Transitioning the hybrid governance framework from an empirical evaluation setting to a production CI/CD pipeline introduced practical engineering and operational constraints that were beyond the scope of this study's technical evaluation but are important for real-world adoption.
 
@@ -1392,7 +1398,7 @@ Transitioning the hybrid governance framework from an empirical evaluation setti
 
 \textbf{Explainability and Audit Trail.} In regulatory contexts governed by frameworks such as the EU Cyber Resilience Act or NIST SSDF, governance decisions must be auditable and traceable. The PaC channel's output was inherently explainable, as each finding referenced a specific rule, a CWE identifier, and the offending code location. The ML channel's output was not intrinsically interpretable; production deployments should augment ML-derived Block decisions with attention visualization or SHAP-based feature attribution to meet auditability requirements. The hybrid architecture, by preserving both channels, was well-positioned to provide PaC-backed explanations for a subset of blocks while falling back to attribution-based explanations for ML-dominated ones.
 
-\subsection{Limitations of the Study}
+\section{Limitations of the Study}
 
 The following limitations circumscribed the scope and generalizability of this study's findings and should be considered when interpreting the results or designing follow-on research.
 
