@@ -78,9 +78,10 @@
 
 % --- chapter/section formatting ---
 \usepackage{titlesec}
+\renewcommand{\chaptername}{CHAPTER}
 \titleformat{\chapter}[block]
   {\normalfont\bfseries\centering}
-  {CHAPTER \thechapter}
+  {\chaptername{} \thechapter}
   {0pt}
   {\\\bfseries\centering}
 \titlespacing*{\chapter}{0pt}{0pt}{20pt}
@@ -1410,15 +1411,15 @@ In regulatory contexts governed by frameworks such as the EU Cyber Resilience Ac
 
 The following limitations circumscribed the scope and generalizability of this study's findings and should be considered when interpreting the results or designing follow-on research.
 
-\textbf{Limitation 1: Function-Level Evaluation Constrains PaC Effectiveness.} The entire evaluation was conducted on isolated function-level code snippets extracted from DiverseVul. PaC systems such as Semgrep are designed to analyze code within its structural context, including header files, macro definitions, cross-function call sites, and inter-file dependencies. By operating on function snippets stripped of this context, the evaluation systematically reduced PaC's ability to fire on patterns that are detectable at file or repository granularity. The PaC recall of 0.033 should therefore be interpreted as a lower bound on PaC effectiveness in end-to-end governance deployments, not as a representative ceiling. Organizations evaluating PaC for production use should not generalize from this figure without conducting a parallel evaluation on file-level or repository-level corpora.
+Function-Level Evaluation Constrains PaC Effectiveness. The entire evaluation was conducted on isolated function-level code snippets extracted from DiverseVul. PaC systems such as Semgrep are designed to analyze code within its structural context, including header files, macro definitions, cross-function call sites, and inter-file dependencies. By operating on function snippets stripped of this context, the evaluation systematically reduced PaC's ability to fire on patterns that are detectable at file or repository granularity. The PaC recall of 0.033 should therefore be interpreted as a lower bound on PaC effectiveness in end-to-end governance deployments, not as a representative ceiling. Organizations evaluating PaC for production use should not generalize from this figure without conducting a parallel evaluation on file-level or repository-level corpora.
 
-\textbf{Limitation 2: Random Split May Overestimate Within-Distribution Generalization.} The train, validation, and test sets were formed by a random split over the DiverseVul corpus. As a consequence, the evaluation measured within-distribution generalization, where test samples were drawn from the same projects and time periods as training samples. This approach was known to overestimate performance relative to cross-project or temporal holdout evaluation protocols. \citet{chen2023} reported that CodeBERT's F1 dropped from approximately 38\% (random split, combined datasets) to approximately 11\% (unseen-projects protocol), a delta that illustrated how substantially random-split metrics could diverge from realistic deployment performance. The metrics reported in this study, including the Hybrid Block-decision F1 of 0.186, were likely optimistic relative to what would be observed under a project-level holdout.
+Random Split May Overestimate Within-Distribution Generalization. The train, validation, and test sets were formed by a random split over the DiverseVul corpus. As a consequence, the evaluation measured within-distribution generalization, where test samples were drawn from the same projects and time periods as training samples. This approach was known to overestimate performance relative to cross-project or temporal holdout evaluation protocols. \citet{chen2023} reported that CodeBERT's F1 dropped from approximately 38\% (random split, combined datasets) to approximately 11\% (unseen-projects protocol), a delta that illustrated how substantially random-split metrics could diverge from realistic deployment performance. The metrics reported in this study, including the Hybrid Block-decision F1 of 0.186, were likely optimistic relative to what would be observed under a project-level holdout.
 
-\textbf{Limitation 3: Single Dataset Limits External Validity.} All experimental conclusions were derived from a single benchmark dataset, DiverseVul, which covers C/C++ code drawn from open-source projects on GitHub. Results may not generalize to: (a) other programming languages (Python, Java, JavaScript, Rust), since both the ML model's learned representations and the PaC rule set were calibrated to C/C++ patterns; (b) closed-source or enterprise codebases, whose coding styles, project structures, and vulnerability distributions may differ substantially from open-source repositories; or (c) other vulnerability datasets (e.g., Devign, BigVul, the Juliet Test Suite), which apply different labeling methodologies and may emphasize different CWE distributions. Researchers and practitioners should treat the quantitative findings as specific to the DiverseVul-C/C++ setting until cross-dataset replication is available.
+Single Dataset Limits External Validity. All experimental conclusions were derived from a single benchmark dataset, DiverseVul, which covers C/C++ code drawn from open-source projects on GitHub. Results may not generalize to: (a) other programming languages (Python, Java, JavaScript, Rust), since both the ML model's learned representations and the PaC rule set were calibrated to C/C++ patterns; (b) closed-source or enterprise codebases, whose coding styles, project structures, and vulnerability distributions may differ substantially from open-source repositories; or (c) other vulnerability datasets (e.g., Devign, BigVul, the Juliet Test Suite), which apply different labeling methodologies and may emphasize different CWE distributions. Researchers and practitioners should treat the quantitative findings as specific to the DiverseVul-C/C++ setting until cross-dataset replication is available.
 
-\textbf{Limitation 4: Static Hybrid Weights Were Not Validated Under Distribution Shift.} The hybrid weights ($\alpha = 0.75$, $\beta = 0.25$) and decision thresholds (Block $\geq 0.40$, Review $\geq 0.10$) were optimized on the DiverseVul validation set and evaluated on the DiverseVul test set from the same distribution. There was no evaluation of whether these parameters remained effective when the codebase characteristics, vulnerability mix, or PaC coverage rate changed. In production environments, distribution shift was the norm rather than the exception, and statically tuned parameters could degrade in effectiveness over time without periodic recalibration.
+Static Hybrid Weights Were Not Validated Under Distribution Shift. The hybrid weights ($\alpha = 0.75$, $\beta = 0.25$) and decision thresholds (Block $\geq 0.40$, Review $\geq 0.10$) were optimized on the DiverseVul validation set and evaluated on the DiverseVul test set from the same distribution. There was no evaluation of whether these parameters remained effective when the codebase characteristics, vulnerability mix, or PaC coverage rate changed. In production environments, distribution shift was the norm rather than the exception, and statically tuned parameters could degrade in effectiveness over time without periodic recalibration.
 
-\textbf{Limitation 5: Absence of Human-in-the-Loop and Developer Acceptance Evaluation.} This study evaluated purely technical detection performance. The governance framework's practical utility, including whether developers trust and comply with its decisions, whether the REVIEW tier's volume is operationally manageable, and whether the Block decisions are actionable given the available explanations, was not assessed. These organizational factors are known to significantly influence the real-world impact of automated governance tools \citep{rahman2023}.
+Absence of Human-in-the-Loop and Developer Acceptance Evaluation. This study evaluated purely technical detection performance. The governance framework's practical utility, including whether developers trust and comply with its decisions, whether the REVIEW tier's volume is operationally manageable, and whether the Block decisions are actionable given the available explanations, was not assessed. These organizational factors are known to significantly influence the real-world impact of automated governance tools \citep{rahman2023}.
 
 % ============================================================
 \chapter{SUMMARY, FINDINGS, CONCLUSIONS, AND RECOMMENDATIONS}
@@ -1435,6 +1436,7 @@ A key methodological refinement during Phase 3 was the expansion of the Semgrep 
 \section{Findings}
 
 The study produced the following key findings:
+
 
 CodeBERT substantially outperformed the Random Forest baseline. On the validation set, fine-tuned CodeBERT achieved an F1-score of 0.189 compared to 0.024 for the Random Forest classifier, confirming the superiority of pre-trained transformer-based code representations for vulnerability classification.
 
@@ -1498,6 +1500,7 @@ During the preparation of this work the author used Claude (Anthropic) in order 
 % APPENDICES
 % ============================================================
 \appendix
+\renewcommand{\chaptername}{APPENDIX}
 
 \chapter{DATASET STATISTICS}
 \label{app:dataset}
